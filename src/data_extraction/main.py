@@ -10,6 +10,7 @@ from data_extraction.dev.dry_run import run_dry_pipeline
 from data_extraction.jobs.registry import list_jobs
 from data_extraction.pipeline.configured_run import run_configured_pipeline
 from data_extraction.pipeline.definitions import get_full_pipeline_order
+from data_extraction.preflight import run_preflight
 from data_extraction.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "list-pipeline",
         help="List full pipeline job order",
+    )
+
+    subparsers.add_parser(
+        "preflight",
+        help="Run local production readiness checks",
     )
 
     dry_pipeline_parser = subparsers.add_parser(
@@ -145,6 +151,25 @@ def print_pipeline_order(config_path: str) -> None:
         logger.info("- %s", job_name)
 
 
+def print_preflight(config_path: str) -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
+    result = run_preflight(config_path)
+    checks = result["checks"]
+    if isinstance(checks, list):
+        for check in checks:
+            logger.info(
+                "preflight %-6s %s - %s",
+                check.get("status"),
+                check.get("name"),
+                check.get("message"),
+            )
+
+    logger.info("Preflight status: %s", result["status"])
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -159,6 +184,10 @@ def main() -> None:
 
     if args.command == "list-pipeline":
         print_pipeline_order(args.config)
+        return
+
+    if args.command == "preflight":
+        print_preflight(args.config)
         return
 
     if args.command == "run-dry-pipeline":
