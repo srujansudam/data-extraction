@@ -30,6 +30,7 @@ class LotusNotesConfig(BaseModel):
     mode: str = Field(default="excel", pattern="^(excel|corba)$")
     secret_ref: str | None = None
     excel_input_folder: str = "data/lotus_notes/incoming"
+    files: dict[str, str] = Field(default_factory=dict)
     corba_java_command: str = "java"
     corba_jar_path: str = "java/lotus-corba-reader/dist/lotus-corba-reader.jar"
 

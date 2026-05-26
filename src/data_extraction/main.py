@@ -8,6 +8,7 @@ from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.dev.dry_run import run_dry_pipeline
 from data_extraction.jobs.registry import list_jobs
+from data_extraction.pipeline.configured_run import run_configured_pipeline
 from data_extraction.pipeline.definitions import get_full_pipeline_order
 from data_extraction.utils.logging import setup_logging
 
@@ -52,6 +53,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the local development dry-run pipeline",
     )
     dry_pipeline_parser.add_argument(
+        "--reset-db",
+        action="store_true",
+        help="Delete the configured SQLite database before running",
+    )
+
+    daily_parser = subparsers.add_parser(
+        "run-daily",
+        help="Run the configured daily pipeline",
+    )
+    daily_parser.add_argument(
+        "--reset-db",
+        action="store_true",
+        help="Delete the configured SQLite database before running",
+    )
+
+    backfill_parser = subparsers.add_parser(
+        "run-backfill",
+        help="Run the configured backfill pipeline",
+    )
+    backfill_parser.add_argument(
         "--reset-db",
         action="store_true",
         help="Delete the configured SQLite database before running",
@@ -142,6 +163,22 @@ def main() -> None:
 
     if args.command == "run-dry-pipeline":
         run_dry_pipeline(config_path=args.config, reset_db=args.reset_db)
+        return
+
+    if args.command == "run-daily":
+        run_configured_pipeline(
+            config_path=args.config,
+            run_type="daily",
+            reset_db=args.reset_db,
+        )
+        return
+
+    if args.command == "run-backfill":
+        run_configured_pipeline(
+            config_path=args.config,
+            run_type="backfill",
+            reset_db=args.reset_db,
+        )
         return
 
     if args.command == "show-config" or args.command is None:

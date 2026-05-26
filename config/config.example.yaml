@@ -29,6 +29,12 @@ sources:
     mode: excel # excel or corba
     secret_ref: LOTUS_NOTES
     excel_input_folder: data/lotus_notes/incoming
+    files:
+      lotus_bov_employees: data/lotus_notes/incoming/bov_employees.xlsx
+      lotus_legal_rulings: data/lotus_notes/incoming/legal_rulings.xlsx
+      lotus_garnishee_orders: data/lotus_notes/incoming/garnishee_orders.xlsx
+      lotus_poa_revocation: data/lotus_notes/incoming/poa_revocation.xlsx
+      lotus_discrepancies_management: data/lotus_notes/incoming/discrepancies_management.xlsx
     corba_java_command: java
     corba_jar_path: java/lotus-corba-reader/dist/lotus-corba-reader.jar
 
