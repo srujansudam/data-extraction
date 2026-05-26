@@ -6,6 +6,7 @@ import logging
 from data_extraction.config.settings import load_settings
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+from data_extraction.jobs.registry import list_jobs
 from data_extraction.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "init-db",
         help="Initialise the local SQLite database schema",
+    )
+
+    subparsers.add_parser(
+        "list-jobs",
+        help="List registered extraction jobs",
     )
 
     return parser
@@ -64,12 +70,34 @@ def init_db(config_path: str) -> None:
         db.close()
 
 
+def print_registered_jobs(config_path: str) -> None:
+    settings = load_settings(config_path)
+    setup_logging(settings.logging.level, settings.logging.folder)
+
+    jobs = list_jobs()
+
+    logger.info("Registered extraction jobs:")
+
+    for job in jobs:
+        logger.info(
+            "- %s | source=%s | target=%s | %s",
+            job.job_name,
+            job.source_system,
+            job.target_table,
+            job.description,
+        )
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
     if args.command == "init-db":
         init_db(args.config)
+        return
+
+    if args.command == "list-jobs":
+        print_registered_jobs(args.config)
         return
 
     if args.command == "show-config" or args.command is None:
