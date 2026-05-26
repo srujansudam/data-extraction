@@ -1,0 +1,42 @@
+app:
+  name: data-extraction
+  environment: local
+
+database:
+  type: sqlite
+  path: data/internal_audit.db
+  encryption: none
+  secret_ref: INTERNAL_AUDIT_DB_KEY
+
+sources:
+  orion:
+    type: oracle
+    secret_ref: ORION_DB
+    enabled: true
+
+  flexcube:
+    type: oracle
+    secret_ref: FLEXCUBE_DB
+    enabled: true
+
+  hris:
+    type: oracle
+    secret_ref: HRIS_DB
+    enabled: true
+
+  lotus_notes:
+    enabled: true
+    mode: excel # excel or corba
+    secret_ref: LOTUS_NOTES
+    excel_input_folder: data/lotus_notes/incoming
+    corba_java_command: java
+    corba_jar_path: java/lotus-corba-reader/dist/lotus-corba-reader.jar
+
+extraction:
+  daily_mode: previous_day
+  backfill_years: 2
+  timezone: Europe/Malta
+
+logging:
+  level: INFO
+  folder: logs
