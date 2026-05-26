@@ -31,6 +31,19 @@ class SQLiteAdapter(DatabaseAdapter):
         connection = self._get_connection()
         connection.execute(sql, tuple(params or []))
 
+    def execute_and_get_lastrow_id(
+        self,
+        sql: str,
+        params: Iterable[Any] | None = None,
+    ) -> int:
+        connection = self._get_connection()
+        cursor = connection.execute(sql, tuple(params or []))
+
+        if cursor.lastrowid is None:
+            raise RuntimeError("Could not retrieve last inserted row id.")
+
+        return int(cursor.lastrowid)
+
     def query_one(
         self,
         sql: str,

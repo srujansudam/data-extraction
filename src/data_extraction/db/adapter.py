@@ -19,6 +19,14 @@ class DatabaseAdapter(ABC):
         """Execute a SQL statement that does not return rows."""
 
     @abstractmethod
+    def execute_and_get_lastrow_id(
+        self,
+        sql: str,
+        params: Iterable[Any] | None = None,
+    ) -> int:
+        """Execute an insert statement and return the inserted row id."""
+
+    @abstractmethod
     def query_one(
         self,
         sql: str,

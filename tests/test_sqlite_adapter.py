@@ -42,3 +42,33 @@ def test_sqlite_adapter_raises_if_not_connected() -> None:
         raised = True
 
     assert raised is True
+
+def test_sqlite_adapter_can_return_lastrow_id(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        db.execute(
+            """
+            CREATE TABLE example_table (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL
+            )
+            """
+        )
+
+        row_id = db.execute_and_get_lastrow_id(
+            "INSERT INTO example_table (name) VALUES (?)",
+            ["test row"],
+        )
+        db.commit()
+
+        assert row_id == 1
+
+        row = db.query_one("SELECT id, name FROM example_table WHERE id = ?", [row_id])
+
+        assert row == {"id": 1, "name": "test row"}
+    finally:
+        db.close()
