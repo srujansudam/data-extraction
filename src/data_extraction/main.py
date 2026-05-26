@@ -6,6 +6,7 @@ import logging
 from data_extraction.config.settings import load_settings
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+from data_extraction.dev.dry_run import run_dry_pipeline
 from data_extraction.jobs.registry import list_jobs
 from data_extraction.pipeline.definitions import get_full_pipeline_order
 from data_extraction.utils.logging import setup_logging
@@ -44,6 +45,16 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "list-pipeline",
         help="List full pipeline job order",
+    )
+
+    dry_pipeline_parser = subparsers.add_parser(
+        "run-dry-pipeline",
+        help="Run the local development dry-run pipeline",
+    )
+    dry_pipeline_parser.add_argument(
+        "--reset-db",
+        action="store_true",
+        help="Delete the configured SQLite database before running",
     )
 
     return parser
@@ -127,6 +138,10 @@ def main() -> None:
 
     if args.command == "list-pipeline":
         print_pipeline_order(args.config)
+        return
+
+    if args.command == "run-dry-pipeline":
+        run_dry_pipeline(config_path=args.config, reset_db=args.reset_db)
         return
 
     if args.command == "show-config" or args.command is None:
