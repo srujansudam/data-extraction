@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from data_extraction.db.schema import create_all_tables, create_tracking_tables
+from data_extraction.db.schema import (
+    STAGING_TABLE_NAMES,
+    create_all_tables,
+    create_staging_tables,
+    create_tracking_tables,
+)
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 
 
@@ -62,6 +67,65 @@ def test_create_all_tables_includes_model_tables(tmp_path: Path) -> None:
         assert "office_accounts" in table_names
         assert "legal_rulings" in table_names
         assert "loans" in table_names
+    finally:
+        db.close()
+
+
+def test_create_staging_tables_creates_expected_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_staging_tables(db)
+
+        table_names = get_table_names(db)
+
+        assert set(STAGING_TABLE_NAMES).issubset(table_names)
+    finally:
+        db.close()
+
+
+def test_create_all_tables_includes_staging_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        table_names = get_table_names(db)
+
+        assert set(STAGING_TABLE_NAMES).issubset(table_names)
+    finally:
+        db.close()
+
+
+def test_staging_tables_have_standard_columns(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_staging_tables(db)
+
+        rows = db.query_all("PRAGMA table_info(stg_flexcube_office_accounts)")
+        columns = {row["name"]: row for row in rows}
+
+        assert list(columns) == [
+            "staging_id",
+            "run_id",
+            "source_system",
+            "source_object",
+            "source_row_hash",
+            "source_payload",
+            "extracted_at",
+        ]
+        assert columns["staging_id"]["pk"] == 1
+        assert columns["source_system"]["notnull"] == 1
+        assert columns["source_object"]["notnull"] == 1
+        assert columns["source_payload"]["notnull"] == 1
+        assert columns["extracted_at"]["dflt_value"] == "CURRENT_TIMESTAMP"
     finally:
         db.close()
 

@@ -284,6 +284,43 @@ MODEL_TABLE_SQL = [
 ]
 
 
+STAGING_TABLE_NAMES = [
+    "stg_orion_accounts",
+    "stg_orion_customers",
+    "stg_orion_transactions",
+    "stg_orion_loans",
+    "stg_orion_eom_book_balance",
+    "stg_orion_adc_access",
+    "stg_flexcube_dormant_accounts",
+    "stg_flexcube_office_accounts",
+    "stg_flexcube_credit_cards",
+    "stg_flexcube_exchange_rate",
+    "stg_flexcube_enquiry",
+    "stg_hris_staff_identification",
+    "stg_hris_personnel_contact_detail",
+    "stg_hris_appendix_3_crm",
+    "stg_lotus_bov_employees",
+    "stg_lotus_legal_rulings",
+    "stg_lotus_garnishee_orders",
+    "stg_lotus_poa_revocation",
+    "stg_lotus_discrepancies_management",
+]
+
+
+def _staging_table_sql(table_name: str) -> str:
+    return f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        staging_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id INTEGER,
+        source_system TEXT NOT NULL,
+        source_object TEXT NOT NULL,
+        source_row_hash TEXT,
+        source_payload TEXT NOT NULL,
+        extracted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+
+
 def create_tracking_tables(db: DatabaseAdapter) -> None:
     for sql in TRACKING_TABLE_SQL:
         db.execute(sql)
@@ -298,6 +335,14 @@ def create_model_tables(db: DatabaseAdapter) -> None:
     db.commit()
 
 
+def create_staging_tables(db: DatabaseAdapter) -> None:
+    for table_name in STAGING_TABLE_NAMES:
+        db.execute(_staging_table_sql(table_name))
+
+    db.commit()
+
+
 def create_all_tables(db: DatabaseAdapter) -> None:
     create_tracking_tables(db)
     create_model_tables(db)
+    create_staging_tables(db)

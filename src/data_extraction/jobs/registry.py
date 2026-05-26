@@ -24,6 +24,24 @@ JOB_REGISTRY: dict[str, JobDefinition] = {
         target_table="dormant_account",
         description="Extract dormant account snapshot from FCBOV.STTM_ACCOUNT_BALANCE.",
     ),
+    "exchange_rate": JobDefinition(
+        job_name="exchange_rate",
+        source_system="flexcube",
+        target_table="exchange_rate",
+        description="Extract exchange rates from FCCREAD.BVTB_FXBV128_HIST.",
+    ),
+    "loans": JobDefinition(
+        job_name="loans",
+        source_system="orion",
+        target_table="loans",
+        description="Extract loan account details from ORION loan and product hierarchy tables.",
+    ),
+    "eom_book_balance": JobDefinition(
+        job_name="eom_book_balance",
+        source_system="orion",
+        target_table="eom_book_balance",
+        description="Extract EOM book balances from ORION EOM account tables.",
+    ),
 }
 
 
