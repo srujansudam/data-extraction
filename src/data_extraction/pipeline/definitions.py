@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+DIRECT_JOB_ORDER = [
+    "office_accounts",
+    "dormant_account",
+    "exchange_rate",
+    "loans",
+    "eom_book_balance",
+    "credit_cards",
+    "enquiry",
+]
+
 STAGING_JOB_ORDER = [
     "orion_accounts",
     "orion_customers",
@@ -27,3 +37,11 @@ TRANSFORM_JOB_ORDER = [
     "transform_third_party_access",
     "transform_allowed_third_party",
 ]
+
+
+def get_full_pipeline_order() -> dict[str, list[str]]:
+    return {
+        "direct": DIRECT_JOB_ORDER,
+        "staging": STAGING_JOB_ORDER,
+        "transform": TRANSFORM_JOB_ORDER,
+    }

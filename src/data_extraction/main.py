@@ -7,6 +7,7 @@ from data_extraction.config.settings import load_settings
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.jobs.registry import list_jobs
+from data_extraction.pipeline.definitions import get_full_pipeline_order
 from data_extraction.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "list-jobs",
         help="List registered extraction jobs",
+    )
+
+    subparsers.add_parser(
+        "list-pipeline",
+        help="List full pipeline job order",
     )
 
     return parser
@@ -88,6 +94,25 @@ def print_registered_jobs(config_path: str) -> None:
         )
 
 
+def print_pipeline_order(config_path: str) -> None:
+    settings = load_settings(config_path)
+    setup_logging(settings.logging.level, settings.logging.folder)
+
+    pipeline_order = get_full_pipeline_order()
+
+    logger.info("Direct jobs:")
+    for job_name in pipeline_order["direct"]:
+        logger.info("- %s", job_name)
+
+    logger.info("Staging jobs:")
+    for job_name in pipeline_order["staging"]:
+        logger.info("- %s", job_name)
+
+    logger.info("Transform jobs:")
+    for job_name in pipeline_order["transform"]:
+        logger.info("- %s", job_name)
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -98,6 +123,10 @@ def main() -> None:
 
     if args.command == "list-jobs":
         print_registered_jobs(args.config)
+        return
+
+    if args.command == "list-pipeline":
+        print_pipeline_order(args.config)
         return
 
     if args.command == "show-config" or args.command is None:

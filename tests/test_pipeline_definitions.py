@@ -1,6 +1,23 @@
 from __future__ import annotations
 
-from data_extraction.pipeline.definitions import STAGING_JOB_ORDER, TRANSFORM_JOB_ORDER
+from data_extraction.pipeline.definitions import (
+    DIRECT_JOB_ORDER,
+    STAGING_JOB_ORDER,
+    TRANSFORM_JOB_ORDER,
+    get_full_pipeline_order,
+)
+
+
+def test_pipeline_definitions_include_expected_direct_jobs_only() -> None:
+    assert DIRECT_JOB_ORDER == [
+        "office_accounts",
+        "dormant_account",
+        "exchange_rate",
+        "loans",
+        "eom_book_balance",
+        "credit_cards",
+        "enquiry",
+    ]
 
 
 def test_pipeline_definitions_include_expected_staging_jobs_only() -> None:
@@ -33,3 +50,11 @@ def test_pipeline_definitions_include_expected_transform_jobs_only() -> None:
         "transform_third_party_access",
         "transform_allowed_third_party",
     ]
+
+
+def test_get_full_pipeline_order_groups_all_pipeline_phases() -> None:
+    assert get_full_pipeline_order() == {
+        "direct": DIRECT_JOB_ORDER,
+        "staging": STAGING_JOB_ORDER,
+        "transform": TRANSFORM_JOB_ORDER,
+    }
