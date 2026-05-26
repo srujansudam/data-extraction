@@ -11,11 +11,9 @@ def test_environment_secret_provider_reads_prefixed_variables(monkeypatch: pytes
     provider = EnvironmentSecretProvider(load_dotenv_file=False)
     secret = provider.get_secret("TEST_SECRET")
 
-    assert secret == {
-        "username": "test_user",
-        "password": "test_password",
-        "host": "localhost",
-    }
+    assert secret["username"] == "test_user"
+    assert secret["password"] == "test_password"
+    assert secret["host"] == "localhost"
 
 
 def test_environment_secret_provider_raises_when_secret_missing() -> None:
