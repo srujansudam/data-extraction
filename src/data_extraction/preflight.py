@@ -47,6 +47,7 @@ def run_preflight(config_path: str = "config/config.example.yaml") -> dict[str, 
     )
     _check_directory_can_be_created(checks, "logging_folder", Path(settings.logging.folder))
     _check_database(checks, settings)
+    _check_secret_provider_config(checks, settings)
     _check_required_secret_refs(checks, settings)
     _check_lotus_excel_config(checks, settings)
 
@@ -100,6 +101,46 @@ def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings
             f"{config_attr}_secret_ref",
             f"{display_name} secret_ref is configured.",
         )
+
+
+def _check_secret_provider_config(checks: list[dict[str, str]], settings: Settings) -> None:
+    provider = settings.secrets.provider
+    if provider == "environment":
+        _add_pass(
+            checks,
+            "secret_provider",
+            "Using environment secret provider for local development.",
+        )
+        return
+
+    if provider == "password_safe_cli":
+        cli_config = settings.secrets.password_safe_cli
+        missing = []
+        if not cli_config.executable_path.strip():
+            missing.append("executable_path")
+        if not cli_config.command_template.strip():
+            missing.append("command_template")
+
+        if missing:
+            _add_failure(
+                checks,
+                "secret_provider",
+                f"Password Safe CLI provider missing: {', '.join(missing)}",
+            )
+            return
+
+        _add_pass(checks, "secret_provider", "Password Safe CLI provider is configured.")
+        return
+
+    if provider == "password_safe_http":
+        _add_pass(
+            checks,
+            "secret_provider",
+            "Password Safe HTTP provider selected; implementation is pending client API details.",
+        )
+        return
+
+    _add_failure(checks, "secret_provider", f"Unknown secret provider: {provider}")
 
 
 def _check_lotus_excel_config(checks: list[dict[str, str]], settings: Settings) -> None:

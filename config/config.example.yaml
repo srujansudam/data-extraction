@@ -46,3 +46,14 @@ extraction:
 logging:
   level: INFO
   folder: logs
+
+secrets:
+  provider: environment # environment | password_safe_cli | password_safe_http
+  password_safe_cli:
+    executable_path: ""
+    command_template: ""
+  password_safe_http:
+    base_url: ""
+    auth_secret_ref: ""
+    verify_ssl: true
+    timeout_seconds: 30

@@ -10,6 +10,7 @@ def write_config(
     *,
     include_orion_secret_ref: bool = True,
     include_lotus_files: bool = True,
+    secrets_block: str = "provider: environment",
 ) -> Path:
     db_path = tmp_path / "nested" / "data" / "audit.db"
     log_folder = tmp_path / "nested" / "logs"
@@ -67,6 +68,9 @@ extraction:
 logging:
   level: INFO
   folder: {log_folder.as_posix()}
+
+secrets:
+  {secrets_block}
 """,
         encoding="utf-8",
     )
@@ -120,3 +124,32 @@ def test_preflight_creates_db_and_log_folders_under_tmp_path_config(tmp_path: Pa
     assert (tmp_path / "nested" / "data").is_dir()
     assert (tmp_path / "nested" / "logs").is_dir()
     assert (tmp_path / "nested" / "data" / "audit.db").exists()
+
+
+def test_preflight_passes_environment_secret_provider_with_local_dev_message(
+    tmp_path: Path,
+) -> None:
+    result = run_preflight(str(write_config(tmp_path)))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "passed"
+    assert "local development" in provider_check["message"]
+
+
+def test_preflight_fails_when_password_safe_cli_config_is_incomplete(tmp_path: Path) -> None:
+    config_path = write_config(
+        tmp_path,
+        secrets_block="""
+provider: password_safe_cli
+  password_safe_cli:
+    executable_path: ""
+    command_template: ""
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "failed"
+    assert "executable_path" in provider_check["message"]
+    assert "command_template" in provider_check["message"]

@@ -8,7 +8,7 @@ from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.pipeline.builder import PipelineJobBuilder
 from data_extraction.pipeline.full_runner import FullPipelineRunner
 from data_extraction.pipeline.source_clients import build_oracle_source_clients, close_source_clients
-from data_extraction.secrets.password_safe import EnvironmentSecretProvider
+from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.utils.dates import DateWindow, backfill_window, previous_day_window
 from data_extraction.utils.logging import setup_logging
 
@@ -42,7 +42,7 @@ def run_configured_pipeline(
 
     try:
         create_all_tables(db)
-        secret_provider = EnvironmentSecretProvider()
+        secret_provider = create_secret_provider(settings)
         source_clients = build_oracle_source_clients(settings, secret_provider)
 
         builder = PipelineJobBuilder(

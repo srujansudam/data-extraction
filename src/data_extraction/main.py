@@ -11,6 +11,7 @@ from data_extraction.jobs.registry import list_jobs
 from data_extraction.pipeline.configured_run import run_configured_pipeline
 from data_extraction.pipeline.definitions import get_full_pipeline_order
 from data_extraction.preflight import run_preflight
+from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Delete the configured SQLite database before running",
     )
+
+    test_secret_parser = subparsers.add_parser(
+        "test-secret",
+        help="Retrieve a configured secret and log returned keys only",
+    )
+    test_secret_parser.add_argument("secret_ref", help="Secret reference to test")
 
     return parser
 
@@ -170,6 +177,14 @@ def print_preflight(config_path: str) -> None:
     logger.info("Preflight status: %s", result["status"])
 
 
+def run_secret_test(config_path: str, secret_ref: str) -> None:
+    settings = load_settings(config_path)
+    setup_logging(settings.logging.level, settings.logging.folder)
+    secret_provider = create_secret_provider(settings)
+    secret = secret_provider.get_secret(secret_ref)
+    logger.info("Secret '%s' returned keys: %s", secret_ref, ", ".join(sorted(secret)))
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -208,6 +223,10 @@ def main() -> None:
             run_type="backfill",
             reset_db=args.reset_db,
         )
+        return
+
+    if args.command == "test-secret":
+        run_secret_test(config_path=args.config, secret_ref=args.secret_ref)
         return
 
     if args.command == "show-config" or args.command is None:
