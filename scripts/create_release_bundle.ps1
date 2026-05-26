@@ -1,0 +1,68 @@
+param(
+    [string]$ReleaseRoot = "dist\release",
+    [string]$AppFolderName = "InternalAuditDataExtraction"
+)
+
+$ErrorActionPreference = "Stop"
+
+$ExePath = "dist\data-extraction.exe"
+$ReleasePath = Join-Path $ReleaseRoot $AppFolderName
+
+Write-Host "Creating release bundle..."
+Write-Host "Release path: $ReleasePath"
+
+if (-not (Test-Path $ExePath)) {
+    throw "Executable not found at $ExePath. Run .\scripts\build_exe.ps1 first."
+}
+
+if (Test-Path $ReleasePath) {
+    Write-Host "Removing existing release folder..."
+    Remove-Item $ReleasePath -Recurse -Force
+}
+
+New-Item -Path $ReleasePath -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\config" -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\data" -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\logs" -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\lotus_notes\incoming" -ItemType Directory -Force | Out-Null
+New-Item -Path "$ReleasePath\java\lotus-corba-reader" -ItemType Directory -Force | Out-Null
+New-Item -Path "$ReleasePath\docs" -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\scripts" -ItemType Directory | Out-Null
+
+Copy-Item $ExePath "$ReleasePath\data-extraction.exe"
+
+Copy-Item "config\config.example.yaml" "$ReleasePath\config\config.example.yaml"
+
+Copy-Item "docs\deployment.md" "$ReleasePath\docs\deployment.md" -ErrorAction SilentlyContinue
+Copy-Item "docs\operations_runbook.md" "$ReleasePath\docs\operations_runbook.md" -ErrorAction SilentlyContinue
+Copy-Item "docs\developer_guide.md" "$ReleasePath\docs\developer_guide.md" -ErrorAction SilentlyContinue
+Copy-Item "docs\client_vm_setup_checklist.md" "$ReleasePath\docs\client_vm_setup_checklist.md" -ErrorAction SilentlyContinue
+
+Copy-Item "scripts\setup_client_vm_folders.ps1" "$ReleasePath\scripts\setup_client_vm_folders.ps1"
+Copy-Item "scripts\create_windows_task_example.ps1" "$ReleasePath\scripts\create_windows_task_example.ps1"
+
+@"
+Internal Audit Data Extraction Release Bundle
+
+Next steps on client VM:
+1. Rename config\config.example.yaml to config\config.yaml.
+2. Update config\config.yaml with Password Safe secret references and Lotus Excel file paths.
+3. Place Lotus Notes Excel extracts under lotus_notes\incoming.
+4. Run:
+   .\data-extraction.exe preflight --config .\config\config.yaml
+5. Test secrets:
+   .\data-extraction.exe test-secret ORION_DB_PROD --config .\config\config.yaml
+   .\data-extraction.exe test-secret FLEXCUBE_DB_PROD --config .\config\config.yaml
+   .\data-extraction.exe test-secret HRIS_DB_PROD --config .\config\config.yaml
+6. Run initial backfill:
+   .\data-extraction.exe run-backfill --config .\config\config.yaml
+7. Schedule daily run:
+   .\data-extraction.exe run-daily --config .\config\config.yaml
+"@ | Out-File "$ReleasePath\README_RELEASE.txt" -Encoding utf8
+
+Write-Host ""
+Write-Host "Release bundle created successfully."
+Write-Host "Location: $ReleasePath"
+Write-Host ""
+Write-Host "Contents:"
+Get-ChildItem $ReleasePath -Recurse | Select-Object FullName
