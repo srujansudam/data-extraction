@@ -86,6 +86,24 @@ def test_create_staging_tables_creates_expected_tables(tmp_path: Path) -> None:
         db.close()
 
 
+def test_create_staging_tables_includes_multisource_lookup_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_staging_tables(db)
+
+        table_names = get_table_names(db)
+
+        assert "stg_flexcube_deceased_customers" in table_names
+        assert "stg_orion_customer_links" in table_names
+        assert "stg_flexcube_user_details" in table_names
+        assert "stg_orion_customer_identity_lookup" in table_names
+    finally:
+        db.close()
+
+
 def test_create_all_tables_includes_staging_tables(tmp_path: Path) -> None:
     db_path = tmp_path / "test.db"
     db = SQLiteAdapter(str(db_path))
