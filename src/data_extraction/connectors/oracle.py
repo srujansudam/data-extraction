@@ -6,6 +6,8 @@ from typing import Any
 
 import oracledb
 
+from data_extraction.secrets.password_safe import SecretProvider
+
 
 @dataclass(frozen=True)
 class OracleCredentials:
@@ -15,11 +17,38 @@ class OracleCredentials:
     port: int
     service_name: str
 
+    @classmethod
+    def from_secret(cls, secret: dict[str, str]) -> OracleCredentials:
+        required_keys = {"username", "password", "host", "port", "service_name"}
+        missing_keys = required_keys - set(secret)
+
+        if missing_keys:
+            missing = ", ".join(sorted(missing_keys))
+            raise ValueError(f"Missing Oracle secret fields: {missing}")
+
+        return cls(
+            username=secret["username"],
+            password=secret["password"],
+            host=secret["host"],
+            port=int(secret["port"]),
+            service_name=secret["service_name"],
+        )
+
 
 class OracleConnector:
     def __init__(self, credentials: OracleCredentials) -> None:
         self.credentials = credentials
         self.connection: oracledb.Connection | None = None
+
+    @classmethod
+    def from_secret_ref(
+        cls,
+        secret_provider: SecretProvider,
+        secret_ref: str,
+    ) -> OracleConnector:
+        secret = secret_provider.get_secret(secret_ref)
+        credentials = OracleCredentials.from_secret(secret)
+        return cls(credentials)
 
     def connect(self) -> None:
         dsn = oracledb.makedsn(
