@@ -99,8 +99,205 @@ TRACKING_TABLE_SQL = [
 ]
 
 
+MODEL_TABLE_SQL = [
+    """
+    CREATE TABLE IF NOT EXISTS account_data (
+        account_number TEXT,
+        account_currency TEXT,
+        acc_designation TEXT,
+        customer_code TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS dormant_account (
+        account_number TEXT,
+        date TEXT,
+        dormant TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS customer_data (
+        customer_code TEXT,
+        phone_number TEXT,
+        creation_date TEXT,
+        identification_number TEXT,
+        customer_name TEXT,
+        customer_address TEXT,
+        age INTEGER,
+        deceased_date TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS third_party_access (
+        customer_code TEXT,
+        account_code TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS allowed_third_party (
+        customer_code TEXT,
+        account_code TEXT,
+        reason TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS related_parties (
+        user_code TEXT,
+        customer_code TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS transaction_data (
+        transaction_serial_number TEXT,
+        first_loan_drawdown_date TEXT,
+        transaction_reference TEXT,
+        channel_lvl_4 TEXT,
+        transaction_date_time TEXT,
+        cheque_number TEXT,
+        detailed_statement_description TEXT,
+        user_code TEXT,
+        amount REAL,
+        transaction_code_description TEXT,
+        transaction_product_description TEXT,
+        account_number TEXT,
+        initiator_id TEXT,
+        statement_description TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        user_code TEXT,
+        customer_code TEXT,
+        id_card_number TEXT,
+        account_number TEXT,
+        departure_date TEXT,
+        departure_details TEXT,
+        location TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS staff (
+        personnel_number TEXT,
+        staff_name TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        id_card_number TEXT,
+        national_id TEXT,
+        user_code TEXT,
+        flexcube_no TEXT,
+        obpm_no TEXT,
+        nt_username TEXT,
+        identity_email TEXT,
+        customer_code TEXT,
+        account_number TEXT,
+        department TEXT,
+        department_name TEXT,
+        section_name TEXT,
+        sub_section TEXT,
+        branch_posted TEXT,
+        main_department TEXT,
+        main_section TEXT,
+        main_sub_section TEXT,
+        primary_position TEXT,
+        primary_position_description TEXT,
+        primary_position_category TEXT,
+        manager_name TEXT,
+        manager_position TEXT,
+        manager_email TEXT,
+        location TEXT,
+        departure_date TEXT,
+        departure_details TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS credit_cards (
+        transaction_reference TEXT,
+        user_code TEXT,
+        date TEXT,
+        customer_code TEXT,
+        branch_code TEXT,
+        amount REAL,
+        credit_card_number TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS exchange_rate (
+        transaction_id TEXT,
+        customer_code TEXT,
+        base_currency TEXT,
+        transaction_type TEXT,
+        branch TEXT,
+        amount REAL,
+        transaction_currency TEXT,
+        exchange_rate REAL,
+        middle_rate REAL,
+        transaction_date TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS enquiry (
+        user_code TEXT,
+        function_id TEXT,
+        start_time TEXT,
+        action_time TEXT,
+        terminal_id TEXT,
+        branch_code TEXT,
+        description TEXT,
+        action TEXT,
+        pkvals TEXT,
+        breadcrumbs TEXT,
+        error_msg TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS eom_book_balance (
+        eom_date TEXT,
+        customer_code TEXT,
+        account_number TEXT,
+        product_lvl_7 TEXT,
+        book_balance REAL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS office_accounts (
+        office_account_number TEXT,
+        customer_code TEXT,
+        office_account_name TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS legal_rulings (
+        deceased_customer_code TEXT,
+        deceased_account_number TEXT,
+        ruling_holder_ID TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS loans (
+        account_number TEXT,
+        customer_code TEXT,
+        product_lvl_6 TEXT,
+        product_lvl_7 TEXT,
+        drawdown_expiry_date TEXT
+    )
+    """,
+]
+
+
 def create_tracking_tables(db: DatabaseAdapter) -> None:
     for sql in TRACKING_TABLE_SQL:
         db.execute(sql)
 
     db.commit()
+
+
+def create_model_tables(db: DatabaseAdapter) -> None:
+    for sql in MODEL_TABLE_SQL:
+        db.execute(sql)
+
+    db.commit()
+
+
+def create_all_tables(db: DatabaseAdapter) -> None:
+    create_tracking_tables(db)
+    create_model_tables(db)

@@ -4,7 +4,7 @@ import argparse
 import logging
 
 from data_extraction.config.settings import load_settings
-from data_extraction.db.schema import create_tracking_tables
+from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.utils.logging import setup_logging
 
@@ -58,7 +58,7 @@ def init_db(config_path: str) -> None:
     db.connect()
 
     try:
-        create_tracking_tables(db)
+        create_all_tables(db)
         logger.info("Database initialised successfully")
     finally:
         db.close()

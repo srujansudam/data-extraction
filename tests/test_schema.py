@@ -1,7 +1,19 @@
 from pathlib import Path
 
-from data_extraction.db.schema import create_tracking_tables
+from data_extraction.db.schema import create_all_tables, create_tracking_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+
+
+def get_table_names(db: SQLiteAdapter) -> set[str]:
+    rows = db.query_all(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+        ORDER BY name
+        """
+    )
+    return {row["name"] for row in rows}
 
 
 def test_create_tracking_tables(tmp_path: Path) -> None:
@@ -12,16 +24,7 @@ def test_create_tracking_tables(tmp_path: Path) -> None:
     try:
         create_tracking_tables(db)
 
-        rows = db.query_all(
-            """
-            SELECT name
-            FROM sqlite_master
-            WHERE type = 'table'
-            ORDER BY name
-            """
-        )
-
-        table_names = {row["name"] for row in rows}
+        table_names = get_table_names(db)
 
         assert "extraction_run" in table_names
         assert "extraction_job_run" in table_names
@@ -29,6 +32,74 @@ def test_create_tracking_tables(tmp_path: Path) -> None:
         assert "extraction_error_log" in table_names
         assert "source_file_ingestion" in table_names
         assert "data_quality_check" in table_names
+    finally:
+        db.close()
+
+
+def test_create_all_tables_includes_model_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        table_names = get_table_names(db)
+
+        assert "account_data" in table_names
+        assert "dormant_account" in table_names
+        assert "customer_data" in table_names
+        assert "third_party_access" in table_names
+        assert "allowed_third_party" in table_names
+        assert "related_parties" in table_names
+        assert "transaction_data" in table_names
+        assert "users" in table_names
+        assert "staff" in table_names
+        assert "credit_cards" in table_names
+        assert "exchange_rate" in table_names
+        assert "enquiry" in table_names
+        assert "eom_book_balance" in table_names
+        assert "office_accounts" in table_names
+        assert "legal_rulings" in table_names
+        assert "loans" in table_names
+    finally:
+        db.close()
+
+
+def test_office_accounts_has_office_account_name(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        rows = db.query_all("PRAGMA table_info(office_accounts)")
+        column_names = {row["name"] for row in rows}
+
+        assert "office_account_name" in column_names
+    finally:
+        db.close()
+
+
+def test_staff_table_has_core_columns(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        rows = db.query_all("PRAGMA table_info(staff)")
+        column_names = {row["name"] for row in rows}
+
+        assert "personnel_number" in column_names
+        assert "user_code" in column_names
+        assert "customer_code" in column_names
+        assert "account_number" in column_names
+        assert "location" in column_names
+        assert "departure_date" in column_names
+        assert "departure_details" in column_names
     finally:
         db.close()
 
