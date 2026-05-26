@@ -19,6 +19,10 @@ class DatabaseAdapter(ABC):
         """Execute a SQL statement that does not return rows."""
 
     @abstractmethod
+    def execute_many(self, sql: str, rows: Iterable[Iterable[Any]]) -> None:
+        """Execute the same SQL statement for many rows."""
+
+    @abstractmethod
     def execute_and_get_lastrow_id(
         self,
         sql: str,

@@ -72,3 +72,37 @@ def test_sqlite_adapter_can_return_lastrow_id(tmp_path: Path) -> None:
         assert row == {"id": 1, "name": "test row"}
     finally:
         db.close()
+
+def test_sqlite_adapter_can_execute_many(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        db.execute(
+            """
+            CREATE TABLE example_table (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+            """
+        )
+
+        db.execute_many(
+            "INSERT INTO example_table (id, name) VALUES (?, ?)",
+            [
+                [1, "first"],
+                [2, "second"],
+            ],
+        )
+        db.commit()
+
+        rows = db.query_all("SELECT id, name FROM example_table ORDER BY id")
+
+        assert rows == [
+            {"id": 1, "name": "first"},
+            {"id": 2, "name": "second"},
+        ]
+    finally:
+        db.close()

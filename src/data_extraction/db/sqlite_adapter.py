@@ -31,6 +31,10 @@ class SQLiteAdapter(DatabaseAdapter):
         connection = self._get_connection()
         connection.execute(sql, tuple(params or []))
 
+    def execute_many(self, sql: str, rows: Iterable[Iterable[Any]]) -> None:
+        connection = self._get_connection()
+        connection.executemany(sql, [tuple(row) for row in rows])
+
     def execute_and_get_lastrow_id(
         self,
         sql: str,
