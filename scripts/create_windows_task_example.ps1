@@ -6,7 +6,7 @@ param(
 
 $ExePath = "$BasePath\data-extraction.exe"
 $ConfigPath = "$BasePath\config\config.yaml"
-$Arguments = "run-daily --config `"$ConfigPath`""
+$Arguments = "--config `"$ConfigPath`" run-daily"
 
 Write-Host "Creating Windows Scheduled Task example..."
 Write-Host "Task name: $TaskName"

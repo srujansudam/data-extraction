@@ -33,4 +33,4 @@ Write-Host "Next steps:"
 Write-Host "1. Copy data-extraction.exe to: $BasePath"
 Write-Host "2. Copy config.yaml to: $BasePath\config\config.yaml"
 Write-Host "3. Place Lotus Notes Excel extracts in: $BasePath\lotus_notes\incoming"
-Write-Host "4. Run: $BasePath\data-extraction.exe preflight --config $BasePath\config\config.yaml"
+Write-Host "4. Run: $BasePath\data-extraction.exe --config $BasePath\config\config.yaml preflight

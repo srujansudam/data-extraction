@@ -76,14 +76,14 @@ The application will only log returned secret keys, never secret values.
 
 Test each secret reference:
 
-.\data-extraction.exe test-secret ORION_DB_PROD --config .\config\config.yaml
-.\data-extraction.exe test-secret FLEXCUBE_DB_PROD --config .\config\config.yaml
-.\data-extraction.exe test-secret HRIS_DB_PROD --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD
+.\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD
+.\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD
 6. First-run validation
 
 Run:
 
-.\data-extraction.exe preflight --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml preflight
 
 Expected result:
 
@@ -91,12 +91,12 @@ Preflight status: passed
 
 Then initialise the database:
 
-.\data-extraction.exe init-db --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml init-db
 7. Dry-run validation
 
 Run:
 
-.\data-extraction.exe run-dry-pipeline --reset-db --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml run-dry-pipeline --reset-db
 
 This uses fake source data and validates the full local pipeline.
 
@@ -104,7 +104,7 @@ This uses fake source data and validates the full local pipeline.
 
 After source connectivity has been validated, run the initial backfill:
 
-.\data-extraction.exe run-backfill --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml run-backfill
 
 The backfill window is configured as 2 years.
 
@@ -112,7 +112,7 @@ The backfill window is configured as 2 years.
 
 Manual daily run:
 
-.\data-extraction.exe run-daily --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml run-daily
 
 Daily extraction uses the previous calendar day.
 
@@ -161,11 +161,11 @@ DB file locked by another process
 
 After fixing the issue, rerun:
 
-.\data-extraction.exe run-daily --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml run-daily
 
 If the failure happened during initial load, rerun:
 
-.\data-extraction.exe run-backfill --config .\config\config.yaml
+.\data-extraction.exe --config .\config\config.yaml run-backfill
 13. Known pending items
 SQLite encryption decision: SQLCipher or SQLite SEE
 Java CORBA Lotus Notes integration

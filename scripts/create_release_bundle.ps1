@@ -32,6 +32,7 @@ New-Item -Path "$ReleasePath\scripts" -ItemType Directory | Out-Null
 Copy-Item $ExePath "$ReleasePath\data-extraction.exe"
 
 Copy-Item "config\config.example.yaml" "$ReleasePath\config\config.example.yaml"
+Copy-Item "config\config.production.template.yaml" "$ReleasePath\config\config.production.template.yaml"
 
 Copy-Item "docs\deployment.md" "$ReleasePath\docs\deployment.md" -ErrorAction SilentlyContinue
 Copy-Item "docs\operations_runbook.md" "$ReleasePath\docs\operations_runbook.md" -ErrorAction SilentlyContinue
@@ -49,15 +50,15 @@ Next steps on client VM:
 2. Update config\config.yaml with Password Safe secret references and Lotus Excel file paths.
 3. Place Lotus Notes Excel extracts under lotus_notes\incoming.
 4. Run:
-   .\data-extraction.exe preflight --config .\config\config.yaml
+   .\data-extraction.exe --config .\config\config.yaml preflight
 5. Test secrets:
-   .\data-extraction.exe test-secret ORION_DB_PROD --config .\config\config.yaml
-   .\data-extraction.exe test-secret FLEXCUBE_DB_PROD --config .\config\config.yaml
-   .\data-extraction.exe test-secret HRIS_DB_PROD --config .\config\config.yaml
+   .\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD 
+   .\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD 
+   .\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD 
 6. Run initial backfill:
-   .\data-extraction.exe run-backfill --config .\config\config.yaml
+   .\data-extraction.exe --config .\config\config.yaml run-backfill
 7. Schedule daily run:
-   .\data-extraction.exe run-daily --config .\config\config.yaml
+   .\data-extraction.exe --config .\config\config.yaml run-daily
 "@ | Out-File "$ReleasePath\README_RELEASE.txt" -Encoding utf8
 
 Write-Host ""

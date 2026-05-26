@@ -1,0 +1,86 @@
+app:
+  name: data-extraction
+  environment: production
+
+database:
+  type: sqlite
+  path: data/internal_audit.db
+  encryption: none
+  secret_ref: INTERNAL_AUDIT_DB_KEY
+
+secrets:
+  provider: password_safe_cli # environment | password_safe_cli | password_safe_http
+
+  password_safe_cli:
+    # Replace with the actual Password Safe CLI executable path on the client VM.
+    executable_path: "C:\\Program Files\\PasswordSafe\\passwordsafe-cli.exe"
+
+    # The command must return JSON with username, password, host, port, service_name.
+    # Keep {secret_ref}; the app replaces it at runtime.
+    # Example only. Adjust once client confirms Password Safe CLI syntax.
+    command_template: "get-secret --id {secret_ref} --format json"
+
+  password_safe_http:
+    base_url: ""
+    auth_secret_ref: ""
+    verify_ssl: true
+    timeout_seconds: 30
+
+sources:
+  orion:
+    type: oracle
+    enabled: true
+
+    # This should be the Password Safe secret ID/link/reference.
+    # Secret must return:
+    # username, password, host, port, service_name
+    secret_ref: ORION_DB_PROD
+
+  flexcube:
+    type: oracle
+    enabled: true
+
+    # This should be the Password Safe secret ID/link/reference.
+    # Secret must return:
+    # username, password, host, port, service_name
+    secret_ref: FLEXCUBE_DB_PROD
+
+  hris:
+    type: oracle
+    enabled: true
+
+    # This should be the Password Safe secret ID/link/reference.
+    # Secret must return:
+    # username, password, host, port, service_name
+    secret_ref: HRIS_DB_PROD
+
+  lotus_notes:
+    enabled: true
+
+    # Current supported mode is excel.
+    # corba is a placeholder/future integration and should not be used yet.
+    mode: excel # excel or corba
+
+    # Optional future secret ref for Lotus Notes/CORBA. Not used in excel mode.
+    secret_ref: LOTUS_NOTES_PROD
+
+    excel_input_folder: lotus_notes/incoming
+
+    files:
+      lotus_bov_employees: lotus_notes/incoming/bov_employees.xlsx
+      lotus_legal_rulings: lotus_notes/incoming/legal_rulings.xlsx
+      lotus_garnishee_orders: lotus_notes/incoming/garnishee_orders.xlsx
+      lotus_poa_revocation: lotus_notes/incoming/poa_revocation.xlsx
+      lotus_discrepancies_management: lotus_notes/incoming/discrepancies_management.xlsx
+
+    corba_java_command: java
+    corba_jar_path: java/lotus-corba-reader/dist/lotus-corba-reader.jar
+
+extraction:
+  daily_mode: previous_day
+  backfill_years: 2
+  timezone: Europe/Malta
+
+logging:
+  level: INFO
+  folder: logs
