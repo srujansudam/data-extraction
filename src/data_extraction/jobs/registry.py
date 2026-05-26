@@ -42,6 +42,18 @@ JOB_REGISTRY: dict[str, JobDefinition] = {
         target_table="eom_book_balance",
         description="Extract EOM book balances from ORION EOM account tables.",
     ),
+    "credit_cards": JobDefinition(
+        job_name="credit_cards",
+        source_system="flexcube",
+        target_table="credit_cards",
+        description="Extract credit card transactions from Flexcube teller tables.",
+    ),
+    "enquiry": JobDefinition(
+        job_name="enquiry",
+        source_system="flexcube",
+        target_table="enquiry",
+        description="Extract customer enquiry activity from Flexcube SMS logs.",
+    ),
 }
 
 

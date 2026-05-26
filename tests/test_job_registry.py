@@ -12,6 +12,8 @@ def test_list_jobs_returns_registered_jobs() -> None:
     assert "exchange_rate" in job_names
     assert "loans" in job_names
     assert "eom_book_balance" in job_names
+    assert "credit_cards" in job_names
+    assert "enquiry" in job_names
 
 
 def test_get_job_definition_returns_known_job() -> None:
