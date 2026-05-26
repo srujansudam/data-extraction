@@ -16,9 +16,11 @@ class SuccessfulDummyTransformJob(BaseTransformJob):
 
     def execute_transform(
         self,
+        run_id: int,
         window_start: str | None,
         window_end: str | None,
     ) -> TransformResult:
+        assert run_id == 1
         assert window_start == "2026-05-25T00:00:00+02:00"
         assert window_end == "2026-05-26T00:00:00+02:00"
 
@@ -36,6 +38,7 @@ class FailingDummyTransformJob(BaseTransformJob):
 
     def execute_transform(
         self,
+        run_id: int,
         window_start: str | None,
         window_end: str | None,
     ) -> TransformResult:

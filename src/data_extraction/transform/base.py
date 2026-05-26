@@ -50,7 +50,11 @@ class BaseTransformJob(ABC):
         )
 
         try:
-            result = self.execute_transform(window_start=window_start, window_end=window_end)
+            result = self.execute_transform(
+                run_id=run_id,
+                window_start=window_start,
+                window_end=window_end,
+            )
 
             self.job_tracker.complete_job(
                 job_run_id=job_run_id,
@@ -99,6 +103,7 @@ class BaseTransformJob(ABC):
     @abstractmethod
     def execute_transform(
         self,
+        run_id: int,
         window_start: str | None,
         window_end: str | None,
     ) -> TransformResult:
