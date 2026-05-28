@@ -5,8 +5,13 @@ app:
 database:
   type: sqlite
   path: data/internal_audit.db
-  encryption: none
+  # Production uses SQLite SEE. The packaged application must use a SEE-enabled sqlite3.dll.
+  encryption: see
+  # INTERNAL_AUDIT_DB_KEY must return JSON like {"key": "long-random-passphrase"}.
+  # Do not store the database key directly in config.yaml.
   secret_ref: INTERNAL_AUDIT_DB_KEY
+  # Populate only if the SEE shared library build requires activation.
+  see_activation_key: ""
 
 secrets:
   provider: password_safe_cli # environment | password_safe_cli | password_safe_http

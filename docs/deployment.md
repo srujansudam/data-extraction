@@ -18,15 +18,18 @@ Copy these deployment assets:
 - `config/config.yaml`
 - `data/`
 - `logs/`
+- SEE-enabled `sqlite3.dll` beside `data-extraction.exe` when `database.encryption: see`
 - `java/lotus-corba-reader/` if CORBA is enabled later
 
 The client VM should not need Python libraries installed separately.
 
 ## Current Limitations
 
-- SQLite encryption decision is pending: SQLCipher or SQLite SEE.
+- SQLite SEE is the production encryption option. SEE binaries and license material are not included in this repository.
 - Password Safe provider is pending client product/API details.
 - Lotus Notes currently supports Excel ingestion. CORBA integration will be added later.
+
+For production encryption setup, follow [sqlite_see_setup.md](sqlite_see_setup.md).
 
 ## Commands
 
@@ -43,3 +46,5 @@ Use `--config path\to\config.yaml` when the config is not in the default locatio
 ## Credentials
 
 Do not store real credentials in config files. Production config should contain secret references only. The actual secret provider integration can then resolve those references at runtime.
+
+For encrypted production databases, `database.secret_ref` should point to `INTERNAL_AUDIT_DB_KEY`, and that secret should return JSON such as `{"key": "long-random-passphrase"}`.

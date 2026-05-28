@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from data_extraction.config.settings import Settings, load_settings
+from data_extraction.db.key_provider import get_database_key
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.pipeline.builder import PipelineJobBuilder
@@ -36,13 +37,19 @@ def run_configured_pipeline(
     if reset_db and db_path.exists():
         db_path.unlink()
 
-    db = SQLiteAdapter(str(db_path))
+    secret_provider = create_secret_provider(settings)
+    database_key = _database_key_for_settings(settings, secret_provider)
+    db = SQLiteAdapter(
+        str(db_path),
+        encryption=settings.database.encryption,
+        key=database_key,
+        see_activation_key=settings.database.see_activation_key,
+    )
     source_clients = {}
     db.connect()
 
     try:
         create_all_tables(db)
-        secret_provider = create_secret_provider(settings)
         source_clients = build_oracle_source_clients(settings, secret_provider)
 
         builder = PipelineJobBuilder(
@@ -103,3 +110,10 @@ def _validated_lotus_excel_file_paths(settings: Settings) -> dict[str, str]:
         raise ValueError(f"Lotus Excel files do not exist: {', '.join(missing_files)}")
 
     return dict(lotus_config.files)
+
+
+def _database_key_for_settings(settings: Settings, secret_provider) -> str | None:
+    if settings.database.encryption.lower() != "see":
+        return None
+
+    return get_database_key(secret_provider, settings.database.secret_ref)

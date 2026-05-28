@@ -4,6 +4,7 @@ import argparse
 import logging
 
 from data_extraction.config.settings import load_settings
+from data_extraction.db.key_provider import get_database_key
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.dev.dry_run import run_dry_pipeline
@@ -111,7 +112,14 @@ def init_db(config_path: str) -> None:
 
     logger.info("Initialising database at %s", settings.database.path)
 
-    db = SQLiteAdapter(settings.database.path)
+    secret_provider = create_secret_provider(settings)
+    database_key = _database_key_for_settings(settings, secret_provider)
+    db = SQLiteAdapter(
+        settings.database.path,
+        encryption=settings.database.encryption,
+        key=database_key,
+        see_activation_key=settings.database.see_activation_key,
+    )
     db.connect()
 
     try:
@@ -183,6 +191,13 @@ def run_secret_test(config_path: str, secret_ref: str) -> None:
     secret_provider = create_secret_provider(settings)
     secret = secret_provider.get_secret(secret_ref)
     logger.info("Secret '%s' returned keys: %s", secret_ref, ", ".join(sorted(secret)))
+
+
+def _database_key_for_settings(settings, secret_provider) -> str | None:
+    if settings.database.encryption.lower() != "see":
+        return None
+
+    return get_database_key(secret_provider, settings.database.secret_ref)
 
 
 def main() -> None:

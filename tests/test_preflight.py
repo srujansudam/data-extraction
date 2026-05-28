@@ -11,10 +11,15 @@ def write_config(
     include_orion_secret_ref: bool = True,
     include_lotus_files: bool = True,
     secrets_block: str = "provider: environment",
+    database_encryption: str = "none",
+    database_secret_ref: str | None = "INTERNAL_AUDIT_DB_KEY",
 ) -> Path:
     db_path = tmp_path / "nested" / "data" / "audit.db"
     log_folder = tmp_path / "nested" / "logs"
     orion_secret_line = "    secret_ref: ORION_DB\n" if include_orion_secret_ref else ""
+    database_secret_ref_line = (
+        f"  secret_ref: {database_secret_ref}\n" if database_secret_ref is not None else ""
+    )
     lotus_files = (
         """
     files:
@@ -37,8 +42,8 @@ app:
 database:
   type: sqlite
   path: {db_path.as_posix()}
-  encryption: none
-  secret_ref: INTERNAL_AUDIT_DB_KEY
+  encryption: {database_encryption}
+{database_secret_ref_line}  see_activation_key: ""
 
 sources:
   orion:
@@ -124,6 +129,62 @@ def test_preflight_creates_db_and_log_folders_under_tmp_path_config(tmp_path: Pa
     assert (tmp_path / "nested" / "data").is_dir()
     assert (tmp_path / "nested" / "logs").is_dir()
     assert (tmp_path / "nested" / "data" / "audit.db").exists()
+
+
+def test_preflight_fails_if_see_database_secret_ref_is_missing(tmp_path: Path) -> None:
+    config_path = write_config(
+        tmp_path,
+        database_encryption="see",
+        database_secret_ref=None,
+    )
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "failed"
+    encryption_check = check_by_name(result, "database_encryption")
+    assert encryption_check["status"] == "failed"
+    assert "database.secret_ref" in encryption_check["message"]
+
+
+def test_preflight_fails_if_see_database_key_cannot_be_retrieved(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = write_config(
+        tmp_path,
+        database_encryption="see",
+        database_secret_ref="INTERNAL_AUDIT_DB_KEY",
+    )
+    monkeypatch.delenv("INTERNAL_AUDIT_DB_KEY_KEY", raising=False)
+    monkeypatch.delenv("INTERNAL_AUDIT_DB_KEY_PASSWORD", raising=False)
+    monkeypatch.delenv("INTERNAL_AUDIT_DB_KEY_VALUE", raising=False)
+    monkeypatch.delenv("INTERNAL_AUDIT_DB_KEY_SECRET", raising=False)
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "failed"
+    key_check = check_by_name(result, "database_key")
+    assert key_check["status"] == "failed"
+    assert "Could not retrieve SQLite SEE key" in key_check["message"]
+
+
+def test_preflight_fails_clearly_when_see_library_is_not_active(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = write_config(
+        tmp_path,
+        database_encryption="see",
+        database_secret_ref="INTERNAL_AUDIT_DB_KEY",
+    )
+    monkeypatch.setenv("INTERNAL_AUDIT_DB_KEY_KEY", "test-key")
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "failed"
+    schema_check = check_by_name(result, "database_schema")
+    assert schema_check["status"] == "failed"
+    assert "SQLite SEE key was not accepted" in schema_check["message"]
 
 
 def test_preflight_passes_environment_secret_provider_with_local_dev_message(

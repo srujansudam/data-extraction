@@ -17,6 +17,7 @@ class DatabaseConfig(BaseModel):
     path: str
     encryption: str = "none"
     secret_ref: str | None = None
+    see_activation_key: str | None = None
 
 
 class SourceConfig(BaseModel):

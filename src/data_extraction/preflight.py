@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from data_extraction.config.settings import Settings, load_settings
+from data_extraction.db.key_provider import get_database_key
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+from data_extraction.secrets.factory import create_secret_provider
 
 REQUIRED_SOURCE_SECRET_REFS = {
     "ORION": "orion",
@@ -46,8 +48,9 @@ def run_preflight(config_path: str = "config/config.example.yaml") -> dict[str, 
         Path(settings.database.path).parent,
     )
     _check_directory_can_be_created(checks, "logging_folder", Path(settings.logging.folder))
-    _check_database(checks, settings)
+    _check_database_encryption_config(checks, settings)
     _check_secret_provider_config(checks, settings)
+    _check_database(checks, settings)
     _check_required_secret_refs(checks, settings)
     _check_lotus_excel_config(checks, settings)
 
@@ -72,7 +75,29 @@ def _check_directory_can_be_created(
 
 
 def _check_database(checks: list[dict[str, str]], settings: Settings) -> None:
-    db = SQLiteAdapter(settings.database.path)
+    encryption = settings.database.encryption.lower()
+    if encryption not in {"none", "see"}:
+        return
+    if encryption == "see" and not settings.database.secret_ref:
+        return
+
+    database_key = None
+    if encryption == "see":
+        try:
+            secret_provider = create_secret_provider(settings)
+            database_key = get_database_key(secret_provider, settings.database.secret_ref)
+        except Exception as exc:
+            _add_failure(checks, "database_key", f"Could not retrieve SQLite SEE key: {exc}")
+            return
+
+        _add_pass(checks, "database_key", "SQLite SEE database key was retrieved.")
+
+    db = SQLiteAdapter(
+        settings.database.path,
+        encryption=settings.database.encryption,
+        key=database_key,
+        see_activation_key=settings.database.see_activation_key,
+    )
     try:
         db.connect()
         create_all_tables(db)
@@ -83,6 +108,27 @@ def _check_database(checks: list[dict[str, str]], settings: Settings) -> None:
         db.close()
 
     _add_pass(checks, "database_schema", "SQLite database opened and schema initialised.")
+
+
+def _check_database_encryption_config(checks: list[dict[str, str]], settings: Settings) -> None:
+    encryption = settings.database.encryption.lower()
+    if encryption not in {"none", "see"}:
+        _add_failure(
+            checks,
+            "database_encryption",
+            f"Unsupported database encryption mode: {settings.database.encryption}",
+        )
+        return
+
+    if encryption == "see" and not settings.database.secret_ref:
+        _add_failure(
+            checks,
+            "database_encryption",
+            "SQLite SEE encryption requires database.secret_ref.",
+        )
+        return
+
+    _add_pass(checks, "database_encryption", f"Database encryption mode is supported: {encryption}")
 
 
 def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings) -> None:

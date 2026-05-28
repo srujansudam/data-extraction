@@ -4,12 +4,14 @@ import logging
 from pathlib import Path
 
 from data_extraction.config.settings import load_settings
+from data_extraction.db.key_provider import get_database_key
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.dev.fake_source_client import FakeSourceClient
 from data_extraction.dev.lotus_sample_files import create_sample_lotus_files
 from data_extraction.pipeline.builder import PipelineJobBuilder
 from data_extraction.pipeline.full_runner import FullPipelineRunner
+from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.utils.dates import previous_day_window
 from data_extraction.utils.logging import setup_logging
 
@@ -46,7 +48,18 @@ def run_dry_pipeline(
     if reset_db and db_path.exists():
         db_path.unlink()
 
-    db = SQLiteAdapter(str(db_path))
+    secret_provider = create_secret_provider(settings)
+    database_key = (
+        get_database_key(secret_provider, settings.database.secret_ref)
+        if settings.database.encryption.lower() == "see"
+        else None
+    )
+    db = SQLiteAdapter(
+        str(db_path),
+        encryption=settings.database.encryption,
+        key=database_key,
+        see_activation_key=settings.database.see_activation_key,
+    )
     db.connect()
 
     try:

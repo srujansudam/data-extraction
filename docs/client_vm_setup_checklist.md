@@ -58,6 +58,15 @@ Lotus Notes mode and file paths
 
 Do not store real passwords in the config file.
 
+For production, database encryption should be:
+
+database:
+  encryption: see
+  secret_ref: INTERNAL_AUDIT_DB_KEY
+  see_activation_key: ""
+
+Follow docs\sqlite_see_setup.md. Copy the SEE-enabled sqlite3.dll beside data-extraction.exe before running an encrypted DB.
+
 5. Password Safe setup
 
 Production should use the configured Password Safe provider.
@@ -88,6 +97,8 @@ Run:
 Expected result:
 
 Preflight status: passed
+
+For encryption=see, preflight also validates that the SEE-enabled sqlite3.dll accepts PRAGMA textkey.
 
 Then initialise the database:
 
@@ -167,7 +178,6 @@ If the failure happened during initial load, rerun:
 
 .\data-extraction.exe --config .\config\config.yaml run-backfill
 13. Known pending items
-SQLite encryption decision: SQLCipher or SQLite SEE
 Java CORBA Lotus Notes integration
 Final Power BI consumption pattern
 Client-specific Password Safe CLI/API details

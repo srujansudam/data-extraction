@@ -7,6 +7,7 @@ database:
   path: data/internal_audit.db
   encryption: none
   secret_ref: INTERNAL_AUDIT_DB_KEY
+  see_activation_key: ""
 
 sources:
   orion:

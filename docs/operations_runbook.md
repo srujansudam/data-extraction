@@ -11,7 +11,7 @@ It supports:
 - Direct source-to-final table jobs.
 - Source-to-staging jobs followed by transform jobs for multi-source final tables.
 
-Data is stored in the configured SQLite database path under `database.path`.
+Data is stored in the configured SQLite database path under `database.path`. Production uses SQLite SEE when `database.encryption: see`; see `docs/sqlite_see_setup.md`.
 
 ## B. Folder Structure On Client VM
 
@@ -59,6 +59,17 @@ Secret provider selection:
 secrets:
   provider: environment # environment | password_safe_cli | password_safe_http
 ```
+
+Production database encryption:
+
+```yaml
+database:
+  encryption: see
+  secret_ref: INTERNAL_AUDIT_DB_KEY
+  see_activation_key: ""
+```
+
+`INTERNAL_AUDIT_DB_KEY` must return a secret field named `key`, `password`, `value`, or `secret`. Never store the DB key directly in config.
 
 ## D. Password Safe Setup
 
@@ -162,11 +173,10 @@ Copy:
 
 Do not copy local `.env`, development databases, local logs, or test files.
 
-Run `preflight` on the VM before the first real run.
+Run `preflight` on the VM before the first real run. Preflight validates that SEE accepts `PRAGMA textkey` when encryption is enabled. A failure usually means the app is using normal SQLite instead of a SEE-enabled `sqlite3.dll`, or the DB key/activation key is wrong.
 
 ## J. Known Pending Items
 
-- SQLCipher/SEE database encryption.
 - Product-specific Password Safe integration.
 - Java CORBA implementation.
 - Power BI final consumption pattern.
