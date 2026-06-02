@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from data_extraction.connectors.oracle import OracleConnector, OracleCredentials
-from data_extraction.secrets.password_safe import SecretProvider
+from data_extraction.secrets.base import SecretProvider
 
 
 class HrisConnector(OracleConnector):

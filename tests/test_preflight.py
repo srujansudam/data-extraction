@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from textwrap import indent
 
 from data_extraction.preflight import run_preflight
 
@@ -32,6 +33,7 @@ def write_config(
         if include_lotus_files
         else ""
     )
+    secrets_yaml = indent(secrets_block.strip(), "  ")
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -75,7 +77,7 @@ logging:
   folder: {log_folder.as_posix()}
 
 secrets:
-  {secrets_block}
+{secrets_yaml}
 """,
         encoding="utf-8",
     )
@@ -197,14 +199,14 @@ def test_preflight_passes_environment_secret_provider_with_local_dev_message(
     assert "local development" in provider_check["message"]
 
 
-def test_preflight_fails_when_password_safe_cli_config_is_incomplete(tmp_path: Path) -> None:
+def test_preflight_fails_when_keepass_cli_config_is_incomplete(tmp_path: Path) -> None:
     config_path = write_config(
         tmp_path,
         secrets_block="""
-provider: password_safe_cli
-  password_safe_cli:
-    executable_path: ""
-    command_template: ""
+provider: keepass_cli
+keepass_cli:
+  executable_path: ""
+  command_template: ""
 """.strip(),
     )
 
@@ -214,3 +216,21 @@ provider: password_safe_cli
     assert provider_check["status"] == "failed"
     assert "executable_path" in provider_check["message"]
     assert "command_template" in provider_check["message"]
+
+
+def test_preflight_fails_when_keepass_cli_template_lacks_secret_ref(tmp_path: Path) -> None:
+    config_path = write_config(
+        tmp_path,
+        secrets_block="""
+provider: keepass_cli
+keepass_cli:
+  executable_path: powershell.exe
+  command_template: -File scripts/get_keepass_secret.ps1
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "failed"
+    assert "{secret_ref}" in provider_check["message"]

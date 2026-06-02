@@ -59,13 +59,13 @@ $key = [Convert]::ToBase64String($keyBytes)
 $key
 ```
 
-Store this key in the configured secret provider as:
+Store this key in the configured KeePass entry as:
 
 ```json
 {"key": "<generated-key>"}
 ```
 
-Use secret reference `INTERNAL_AUDIT_DB_KEY`. Do not put the key in `config.yaml`. Restrict key access to the service account and administrators.
+Use secret reference `INTERNAL_AUDIT_DB_KEY`. Do not put the key in `config.yaml`. Restrict KeePass vault, key-file, and wrapper access to the service account and administrators. See [keepass_setup.md](keepass_setup.md).
 
 ## H. Configure config.yaml
 

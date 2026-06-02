@@ -159,31 +159,25 @@ def _check_secret_provider_config(checks: list[dict[str, str]], settings: Settin
         )
         return
 
-    if provider == "password_safe_cli":
-        cli_config = settings.secrets.password_safe_cli
+    if provider == "keepass_cli":
+        cli_config = settings.secrets.keepass_cli
         missing = []
         if not cli_config.executable_path.strip():
             missing.append("executable_path")
         if not cli_config.command_template.strip():
             missing.append("command_template")
+        if cli_config.command_template.strip() and "{secret_ref}" not in cli_config.command_template:
+            missing.append("command_template with {secret_ref}")
 
         if missing:
             _add_failure(
                 checks,
                 "secret_provider",
-                f"Password Safe CLI provider missing: {', '.join(missing)}",
+                f"KeePass CLI provider missing: {', '.join(missing)}",
             )
             return
 
-        _add_pass(checks, "secret_provider", "Password Safe CLI provider is configured.")
-        return
-
-    if provider == "password_safe_http":
-        _add_pass(
-            checks,
-            "secret_provider",
-            "Password Safe HTTP provider selected; implementation is pending client API details.",
-        )
+        _add_pass(checks, "secret_provider", "KeePass CLI provider is configured.")
         return
 
     _add_failure(checks, "secret_provider", f"Unknown secret provider: {provider}")

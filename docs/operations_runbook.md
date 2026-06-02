@@ -41,7 +41,7 @@ sources:
     secret_ref: HRIS_DB_PROD
 ```
 
-Oracle endpoint details should live in Password Safe secret records, not in config. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
+Oracle endpoint details should live in KeePass entries resolved by the local wrapper, not in config. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
 
 Lotus mode is selected with:
 
@@ -57,7 +57,7 @@ Secret provider selection:
 
 ```yaml
 secrets:
-  provider: environment # environment | password_safe_cli | password_safe_http
+  provider: environment # environment | keepass_cli
 ```
 
 Production database encryption:
@@ -71,13 +71,12 @@ database:
 
 `INTERNAL_AUDIT_DB_KEY` must return a secret field named `key`, `password`, `value`, or `secret`. Never store the DB key directly in config.
 
-## D. Password Safe Setup
+## D. KeePass Setup
 
 Current supported providers:
 
 - `environment`: local development using environment variables or `.env`.
-- `password_safe_cli`: production integration point via a client-provided Password Safe CLI.
-- `password_safe_http`: placeholder until client API details are confirmed.
+- `keepass_cli`: production integration point via a client-provided KeePass/KeePass-compatible CLI wrapper.
 
 The CLI command template must return JSON:
 
@@ -95,10 +94,10 @@ Example config:
 
 ```yaml
 secrets:
-  provider: password_safe_cli
-  password_safe_cli:
-    executable_path: C:\PasswordSafe\password-safe.exe
-    command_template: get-secret --ref {secret_ref}
+  provider: keepass_cli
+  keepass_cli:
+    executable_path: powershell.exe
+    command_template: -NoProfile -ExecutionPolicy Bypass -File "C:\InternalAuditDataExtraction\scripts\get_keepass_secret.ps1" -SecretRef "{secret_ref}"
 ```
 
 Never store real credentials in config.
@@ -127,7 +126,7 @@ Check:
 
 For a failed daily run, fix the underlying cause and rerun `run-daily`. Use `run-backfill` when the historical window needs to be rebuilt or a schema/source issue affected multiple days.
 
-If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, Password Safe secret fields, service name, host, port, username, and password.
+If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass wrapper output fields, service name, host, port, username, and password.
 
 ## G. Logs And Tracking Tables
 
@@ -169,14 +168,15 @@ Copy:
 - `config\config.yaml`
 - `data\`
 - `logs\`
+- `scripts\get_keepass_secret.ps1`
 - `java\lotus-corba-reader\` when CORBA is implemented
 
-Do not copy local `.env`, development databases, local logs, or test files.
+Do not copy local `.env`, development databases, local logs, test files, KeePass database files, KeePass master passwords, or key files.
 
 Run `preflight` on the VM before the first real run. Preflight validates that SEE accepts `PRAGMA textkey` when encryption is enabled. A failure usually means the app is using normal SQLite instead of a SEE-enabled `sqlite3.dll`, or the DB key/activation key is wrong.
 
 ## J. Known Pending Items
 
-- Product-specific Password Safe integration.
+- Client-specific KeePass wrapper implementation.
 - Java CORBA implementation.
 - Power BI final consumption pattern.

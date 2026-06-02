@@ -8,8 +8,7 @@ from data_extraction.config.settings import load_settings
 from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.secrets.providers import (
     EnvironmentSecretProvider,
-    PasswordSafeCliSecretProvider,
-    PasswordSafeHttpSecretProvider,
+    KeePassCliSecretProvider,
 )
 
 
@@ -37,14 +36,9 @@ logging:
   folder: logs
 secrets:
   provider: {provider}
-  password_safe_cli:
-    executable_path: C:/PasswordSafe/ps.exe
-    command_template: get --secret {{secret_ref}}
-  password_safe_http:
-    base_url: https://password-safe.example
-    auth_secret_ref: PASSWORD_SAFE_AUTH
-    verify_ssl: true
-    timeout_seconds: 30
+  keepass_cli:
+    executable_path: powershell.exe
+    command_template: -File scripts/get_keepass_secret.ps1 -SecretRef {{secret_ref}}
 """,
         encoding="utf-8",
     )
@@ -55,8 +49,7 @@ secrets:
     ("provider_name", "expected_type"),
     [
         ("environment", EnvironmentSecretProvider),
-        ("password_safe_cli", PasswordSafeCliSecretProvider),
-        ("password_safe_http", PasswordSafeHttpSecretProvider),
+        ("keepass_cli", KeePassCliSecretProvider),
     ],
 )
 def test_create_secret_provider_returns_configured_provider(

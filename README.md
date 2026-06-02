@@ -6,7 +6,7 @@ Internal audit data extraction service for loading source data from ORION, Flexc
 
 This service will:
 
-- Retrieve credentials from Password Safe
+- Retrieve credentials from environment variables locally or a KeePass CLI wrapper in production
 - Connect to ORION and Flexcube Oracle databases
 - Connect to HRIS Oracle views
 - Load Lotus Notes data through either Excel extracts or Java CORBA

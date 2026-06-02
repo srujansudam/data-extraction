@@ -14,29 +14,21 @@ database:
   see_activation_key: ""
 
 secrets:
-  provider: password_safe_cli # environment | password_safe_cli | password_safe_http
+  provider: keepass_cli # environment | keepass_cli
 
-  password_safe_cli:
-    # Replace with the actual Password Safe CLI executable path on the client VM.
-    executable_path: "C:\\Program Files\\PasswordSafe\\passwordsafe-cli.exe"
+  keepass_cli:
+    # Wrapper script can call KeePassXC CLI, KeePass/KPScript, or another client-approved local tool.
+    executable_path: "powershell.exe"
 
-    # The command must return JSON with username, password, host, port, service_name.
-    # Keep {secret_ref}; the app replaces it at runtime.
-    # Example only. Adjust once client confirms Password Safe CLI syntax.
-    command_template: "get-secret --id {secret_ref} --format json"
-
-  password_safe_http:
-    base_url: ""
-    auth_secret_ref: ""
-    verify_ssl: true
-    timeout_seconds: 30
+    # The wrapper must return JSON. Keep {secret_ref}; the app replaces it at runtime.
+    command_template: "-NoProfile -ExecutionPolicy Bypass -File \"C:\\InternalAuditDataExtraction\\scripts\\get_keepass_secret.ps1\" -SecretRef \"{secret_ref}\""
 
 sources:
   orion:
     type: oracle
     enabled: true
 
-    # This should be the Password Safe secret ID/link/reference.
+    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: ORION_DB_PROD
@@ -45,7 +37,7 @@ sources:
     type: oracle
     enabled: true
 
-    # This should be the Password Safe secret ID/link/reference.
+    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: FLEXCUBE_DB_PROD
@@ -54,7 +46,7 @@ sources:
     type: oracle
     enabled: true
 
-    # This should be the Password Safe secret ID/link/reference.
+    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: HRIS_DB_PROD

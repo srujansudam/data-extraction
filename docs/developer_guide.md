@@ -47,7 +47,7 @@ def query_all(sql: str, params=None) -> list[dict[str, object]]:
     return [...]
 ```
 
-Do not connect to Oracle, HRIS, Lotus Notes, Password Safe, or external services in unit tests.
+Do not connect to Oracle, HRIS, Lotus Notes, KeePass, or external services in unit tests.
 
 ## Run Tests And Ruff
 

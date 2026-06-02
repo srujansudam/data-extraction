@@ -3,7 +3,7 @@ from __future__ import annotations
 from data_extraction.config.settings import Settings, SourceConfig
 from data_extraction.connectors.base import SourceQueryClient
 from data_extraction.connectors.oracle import OracleConnector
-from data_extraction.secrets.password_safe import SecretProvider
+from data_extraction.secrets.base import SecretProvider
 
 REQUIRED_ORACLE_SOURCES = ("orion", "flexcube", "hris")
 

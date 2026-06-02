@@ -1,6 +1,6 @@
 import pytest
 
-from data_extraction.secrets.password_safe import EnvironmentSecretProvider
+from data_extraction.secrets.base import EnvironmentSecretProvider
 
 
 def test_environment_secret_provider_reads_prefixed_variables(monkeypatch: pytest.MonkeyPatch) -> None:

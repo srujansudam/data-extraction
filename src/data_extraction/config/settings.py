@@ -54,22 +54,14 @@ class LoggingConfig(BaseModel):
     folder: str = "logs"
 
 
-class PasswordSafeCliConfig(BaseModel):
+class KeePassCliConfig(BaseModel):
     executable_path: str = ""
     command_template: str = ""
 
 
-class PasswordSafeHttpConfig(BaseModel):
-    base_url: str = ""
-    auth_secret_ref: str = ""
-    verify_ssl: bool = True
-    timeout_seconds: int = 30
-
-
 class SecretsConfig(BaseModel):
     provider: str = "environment"
-    password_safe_cli: PasswordSafeCliConfig = Field(default_factory=PasswordSafeCliConfig)
-    password_safe_http: PasswordSafeHttpConfig = Field(default_factory=PasswordSafeHttpConfig)
+    keepass_cli: KeePassCliConfig = Field(default_factory=KeePassCliConfig)
 
 
 class Settings(BaseModel):

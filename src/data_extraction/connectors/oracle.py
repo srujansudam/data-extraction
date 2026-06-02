@@ -6,7 +6,7 @@ from typing import Any
 
 import oracledb
 
-from data_extraction.secrets.password_safe import SecretProvider
+from data_extraction.secrets.base import SecretProvider
 
 
 @dataclass(frozen=True)

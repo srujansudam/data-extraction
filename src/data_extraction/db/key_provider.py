@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from data_extraction.secrets.password_safe import SecretProvider
+from data_extraction.secrets.base import SecretProvider
 
 
 def get_database_key(secret_provider: SecretProvider, secret_ref: str | None) -> str:

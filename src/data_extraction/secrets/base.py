@@ -18,9 +18,8 @@ class EnvironmentSecretProvider:
     Local development secret provider.
 
     This reads secrets from environment variables or a local .env file.
-
-    Production will replace this with Password Safe integration while keeping
-    the same get_secret(secret_ref) contract.
+    Production uses the KeePass CLI provider while keeping the same
+    get_secret(secret_ref) contract.
     """
 
     load_dotenv_file: bool = True

@@ -17,7 +17,7 @@ Source systems:
 - Lotus Notes: either Excel extracts or Java CORBA client, switchable by config
 
 Secrets:
-- Production credentials will come from Password Safe
+- Production credentials will come from a local KeePass/KeePass-compatible CLI wrapper
 - Local development uses .env through EnvironmentSecretProvider
 - Do not hardcode credentials
 
