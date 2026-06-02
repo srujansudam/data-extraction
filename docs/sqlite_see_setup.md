@@ -65,7 +65,7 @@ Store this key in the configured KeePass entry as:
 {"key": "<generated-key>"}
 ```
 
-Use secret reference `INTERNAL_AUDIT_DB_KEY`. Do not put the key in `config.yaml`. Restrict KeePass vault, key-file, and wrapper access to the service account and administrators. See [keepass_setup.md](keepass_setup.md).
+Use secret reference `INTERNAL_AUDIT_DB_KEY`. Do not put the key in `config.yaml`. Restrict KeePass vault and key-file access to the service account and administrators. See [keepass_setup.md](keepass_setup.md).
 
 ## H. Configure config.yaml
 

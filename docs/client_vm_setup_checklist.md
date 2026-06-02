@@ -19,6 +19,9 @@ C:\InternalAuditDataExtraction\
   logs\
   lotus_notes\
     incoming\
+  secrets\
+    internal_audit_secrets.kdbx
+    internal_audit_secrets.keyx
   scripts\
     get_keepass_secret.ps1
   tools\
@@ -39,14 +42,14 @@ Copy:
 
 - `data-extraction.exe`
 - `config\config.production.template.yaml`, then copy it to `config\config.yaml`
-- `scripts\get_keepass_secret.ps1`
-- `scripts\README_keepass_setup.md`
+- `scripts\get_keepass_secret.ps1` only if using fallback `keepass_cli`
+- `scripts\README_keepass_setup.md` only if using fallback `keepass_cli`
 - `docs\`
 - `data\`
 - `logs\`
 - SEE-enabled `sqlite3.dll` beside `data-extraction.exe`
 
-Do not copy `.env`, local development databases, local logs, test files, KeePass `.kdbx` files, KeePass master passwords, key files, SEE source, SEE activation keys, or real credentials into the release bundle.
+Do not copy `.env`, local development databases, local logs, test files, SEE source, SEE activation keys, or real credentials into the release bundle. The client-created `.kdbx` and `.keyx` files should be created or placed on the VM under the approved `secrets\` folder, not committed to the repository.
 
 ## 4. Config Setup
 
@@ -55,7 +58,7 @@ The production config should contain:
 - database path
 - logging folder
 - source enablement flags
-- `secrets.provider: keepass_cli`
+- `secrets.provider: keepass`
 - KeePass secret references
 - Lotus Notes mode and file paths
 
@@ -72,17 +75,34 @@ Follow `docs\sqlite_see_setup.md`. Copy the SEE-enabled `sqlite3.dll` beside `da
 
 ## 5. KeePass Setup
 
-Production should use the local KeePass CLI/wrapper provider:
+Production should use the direct KeePass provider:
 
 ```yaml
 secrets:
-  provider: keepass_cli
-  keepass_cli:
-    executable_path: powershell.exe
-    command_template: -NoProfile -ExecutionPolicy Bypass -File "C:\InternalAuditDataExtraction\scripts\get_keepass_secret.ps1" -SecretRef "{secret_ref}"
+  provider: keepass
+  keepass:
+    database_path: secrets/internal_audit_secrets.kdbx
+    key_file_path: secrets/internal_audit_secrets.keyx
+    password_env_var: ""
 ```
 
-The wrapper must return JSON in this shape for Oracle source secrets:
+Create KeePass entries with titles matching the configured secret refs:
+
+- `ORION_DB_PROD`
+- `FLEXCUBE_DB_PROD`
+- `HRIS_DB_PROD`
+- `INTERNAL_AUDIT_DB_KEY`
+
+For Oracle source entries:
+
+- UserName: DB username
+- Password: DB password
+- Custom fields:
+  - `host`
+  - `port`
+  - `service_name`
+
+The direct provider returns this shape for Oracle source secrets:
 
 ```json
 {
@@ -94,7 +114,7 @@ The wrapper must return JSON in this shape for Oracle source secrets:
 }
 ```
 
-The SQLite SEE database key secret `INTERNAL_AUDIT_DB_KEY` should return:
+The SQLite SEE database key secret `INTERNAL_AUDIT_DB_KEY` should be stored as the entry Password or custom field `key`, returning:
 
 ```json
 {
@@ -176,7 +196,7 @@ Create the daily scheduled task using:
   -RunTime "02:00"
 ```
 
-Client IT should configure the correct service account and permissions. The service account must be able to access the application folder, SQLite database, logs, Lotus Excel files, KeePass wrapper, KeePass database, and any KeePass key file required by the wrapper.
+Client IT should configure the correct service account and permissions. The service account must be able to access the application folder, SQLite database, logs, Lotus Excel files, KeePass database, and KeePass key file. If fallback `keepass_cli` is used, it must also be able to run the wrapper script.
 
 ## 11. Logs And Monitoring
 
@@ -207,7 +227,8 @@ Check:
 Common issues:
 
 - Oracle connection failure
-- KeePass wrapper failed or returned incomplete JSON
+- KeePass database or key file is missing/inaccessible
+- KeePass entry fields are incomplete
 - Lotus Notes Excel file missing
 - Invalid config path
 - Network access blocked from VM

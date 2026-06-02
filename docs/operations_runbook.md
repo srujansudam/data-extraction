@@ -23,6 +23,9 @@ C:\InternalAuditDataExtraction\
   config\config.yaml
   data\
   logs\
+  secrets\
+    internal_audit_secrets.kdbx
+    internal_audit_secrets.keyx
   java\
   lotus_notes\incoming\
 ```
@@ -41,7 +44,7 @@ sources:
     secret_ref: HRIS_DB_PROD
 ```
 
-Oracle endpoint details should live in KeePass entries resolved by the local wrapper, not in config. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
+Oracle endpoint details should live in KeePass entries, not in config. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
 
 Lotus mode is selected with:
 
@@ -57,7 +60,7 @@ Secret provider selection:
 
 ```yaml
 secrets:
-  provider: environment # environment | keepass_cli
+  provider: environment # environment | keepass | keepass_cli
 ```
 
 Production database encryption:
@@ -76,9 +79,29 @@ database:
 Current supported providers:
 
 - `environment`: local development using environment variables or `.env`.
-- `keepass_cli`: production integration point via a client-provided KeePass/KeePass-compatible CLI wrapper.
+- `keepass`: production provider that reads a local KeePass/KeePassXC `.kdbx` using PyKeePass.
+- `keepass_cli`: fallback provider via a client-provided KeePass/KeePass-compatible CLI wrapper.
 
-The CLI command template must return JSON:
+Recommended production config:
+
+```yaml
+secrets:
+  provider: keepass
+  keepass:
+    database_path: secrets/internal_audit_secrets.kdbx
+    key_file_path: secrets/internal_audit_secrets.keyx
+    password_env_var: ""
+```
+
+Oracle entries should use the `secret_ref` as the KeePass entry title. Set UserName to the database username, Password to the database password, and custom fields:
+
+- `host`
+- `port`
+- `service_name`
+
+The SQLite SEE key entry should be titled `INTERNAL_AUDIT_DB_KEY`. Store the generated key as the entry password or as custom field `key`.
+
+Fallback CLI mode must return JSON:
 
 ```json
 {
@@ -90,7 +113,7 @@ The CLI command template must return JSON:
 }
 ```
 
-Example config:
+Fallback CLI example:
 
 ```yaml
 secrets:
@@ -126,7 +149,7 @@ Check:
 
 For a failed daily run, fix the underlying cause and rerun `run-daily`. Use `run-backfill` when the historical window needs to be rebuilt or a schema/source issue affected multiple days.
 
-If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass wrapper output fields, service name, host, port, username, and password.
+If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password.
 
 ## G. Logs And Tracking Tables
 
@@ -168,6 +191,7 @@ Copy:
 - `config\config.yaml`
 - `data\`
 - `logs\`
+- `secrets\`
 - `scripts\get_keepass_secret.ps1`
 - `java\lotus-corba-reader\` when CORBA is implemented
 
@@ -177,6 +201,5 @@ Run `preflight` on the VM before the first real run. Preflight validates that SE
 
 ## J. Known Pending Items
 
-- Client-specific KeePass wrapper implementation.
 - Java CORBA implementation.
 - Power BI final consumption pattern.

@@ -18,8 +18,9 @@ Copy these deployment assets:
 - `config/config.yaml`
 - `data/`
 - `logs/`
+- `secrets/` containing the client-created `.kdbx` and `.keyx` files
 - SEE-enabled `sqlite3.dll` beside `data-extraction.exe` when `database.encryption: see`
-- `scripts/get_keepass_secret.ps1` after client-specific KeePass wiring
+- `scripts/get_keepass_secret.ps1` only if using the fallback `keepass_cli` provider
 - `java/lotus-corba-reader/` if CORBA is enabled later
 
 The client VM should not need Python libraries installed separately.
@@ -27,7 +28,7 @@ The client VM should not need Python libraries installed separately.
 ## Current Limitations
 
 - SQLite SEE is the production encryption option. SEE binaries and license material are not included in this repository.
-- Production secrets use a local KeePass/KeePass-compatible CLI wrapper selected by `secrets.provider: keepass_cli`.
+- Production secrets use a local KeePass/KeePassXC `.kdbx` database selected by `secrets.provider: keepass`.
 - Lotus Notes currently supports Excel ingestion. CORBA integration will be added later.
 
 For production encryption setup, follow [sqlite_see_setup.md](sqlite_see_setup.md).
@@ -47,6 +48,6 @@ Use `--config path\to\config.yaml` when the config is not in the default locatio
 
 ## Credentials
 
-Do not store real credentials in config files. Production config should contain secret references only. The configured KeePass wrapper resolves those references at runtime.
+Do not store real credentials in config files. Production config should contain secret references only. The direct KeePass provider resolves those references from the local `.kdbx` at runtime.
 
 For encrypted production databases, `database.secret_ref` should point to `INTERNAL_AUDIT_DB_KEY`, and that secret should return JSON such as `{"key": "long-random-passphrase"}`.

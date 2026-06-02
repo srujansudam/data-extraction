@@ -24,6 +24,7 @@ New-Item -Path $ReleasePath -ItemType Directory | Out-Null
 New-Item -Path "$ReleasePath\config" -ItemType Directory | Out-Null
 New-Item -Path "$ReleasePath\data" -ItemType Directory | Out-Null
 New-Item -Path "$ReleasePath\logs" -ItemType Directory | Out-Null
+New-Item -Path "$ReleasePath\secrets" -ItemType Directory | Out-Null
 New-Item -Path "$ReleasePath\lotus_notes\incoming" -ItemType Directory -Force | Out-Null
 New-Item -Path "$ReleasePath\java\lotus-corba-reader" -ItemType Directory -Force | Out-Null
 New-Item -Path "$ReleasePath\docs" -ItemType Directory | Out-Null
@@ -53,13 +54,13 @@ Internal Audit Data Extraction Release Bundle
 
 Next steps on client VM:
 1. Copy config\config.production.template.yaml to config\config.yaml.
-2. Keep secrets.provider: keepass_cli for production.
-3. Edit scripts\get_keepass_secret.ps1 to call the client-approved KeePass/KeePass-compatible CLI.
-4. Create/populate the KeePass database entries for ORION_DB_PROD, FLEXCUBE_DB_PROD, HRIS_DB_PROD, and INTERNAL_AUDIT_DB_KEY.
+2. Keep secrets.provider: keepass for production.
+3. Create/populate the KeePass database entries for ORION_DB_PROD, FLEXCUBE_DB_PROD, HRIS_DB_PROD, and INTERNAL_AUDIT_DB_KEY.
+4. Place the client-created .kdbx and .keyx files under secrets\ or update config.yaml to their approved paths.
 5. Keep database.encryption: see for production.
-6. Configure INTERNAL_AUDIT_DB_KEY in KeePass. It must return JSON like {"key":"long-random-passphrase"}.
+6. Configure INTERNAL_AUDIT_DB_KEY in KeePass. It can be stored as the entry password or as custom field key.
 7. Compile/copy the licensed SEE-enabled sqlite3.dll beside data-extraction.exe before running an encrypted DB.
-8. Update config\config.yaml with KeePass secret references and Lotus Excel file paths.
+8. Update config\config.yaml with KeePass entry titles and Lotus Excel file paths.
 9. Place Lotus Notes Excel extracts under lotus_notes\incoming.
 10. Run:
    .\data-extraction.exe --config .\config\config.yaml preflight
@@ -73,7 +74,7 @@ Next steps on client VM:
 13. Schedule daily run:
    .\data-extraction.exe --config .\config\config.yaml run-daily
 
-SEE binaries, SEE source code, activation keys, database keys, KeePass databases, master passwords, and key files are not included in this release bundle. See docs\sqlite_see_setup.md and docs\keepass_setup.md.
+SEE binaries, SEE source code, activation keys, database keys, KeePass databases, master passwords, and key files are not included in this release bundle. The scripts\get_keepass_secret.ps1 wrapper remains available only as keepass_cli fallback. See docs\sqlite_see_setup.md and docs\keepass_setup.md.
 "@ | Out-File "$ReleasePath\README_RELEASE.txt" -Encoding utf8
 
 Write-Host ""

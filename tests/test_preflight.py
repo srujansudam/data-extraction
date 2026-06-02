@@ -234,3 +234,109 @@ keepass_cli:
     provider_check = check_by_name(result, "secret_provider")
     assert provider_check["status"] == "failed"
     assert "{secret_ref}" in provider_check["message"]
+
+
+def test_preflight_fails_when_keepass_config_is_incomplete(tmp_path: Path) -> None:
+    config_path = write_config(
+        tmp_path,
+        secrets_block="""
+provider: keepass
+keepass:
+  database_path: ""
+  key_file_path: ""
+  password_env_var: ""
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "failed"
+    assert "database_path" in provider_check["message"]
+    assert "key_file_path or password_env_var" in provider_check["message"]
+
+
+def test_preflight_fails_when_keepass_database_file_is_missing(tmp_path: Path) -> None:
+    key_file_path = tmp_path / "secrets.keyx"
+    key_file_path.write_text("not-real-key-file", encoding="utf-8")
+    config_path = write_config(
+        tmp_path,
+        secrets_block=f"""
+provider: keepass
+keepass:
+  database_path: {(tmp_path / "missing.kdbx").as_posix()}
+  key_file_path: {key_file_path.as_posix()}
+  password_env_var: ""
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "failed"
+    assert "KeePass database file not found" in provider_check["message"]
+
+
+def test_preflight_fails_when_keepass_key_file_is_missing(tmp_path: Path) -> None:
+    database_path = tmp_path / "secrets.kdbx"
+    database_path.write_bytes(b"not-real-kdbx")
+    config_path = write_config(
+        tmp_path,
+        secrets_block=f"""
+provider: keepass
+keepass:
+  database_path: {database_path.as_posix()}
+  key_file_path: {(tmp_path / "missing.keyx").as_posix()}
+  password_env_var: ""
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "failed"
+    assert "KeePass key file not found" in provider_check["message"]
+
+
+def test_preflight_passes_keepass_file_checks_when_files_exist(tmp_path: Path) -> None:
+    database_path = tmp_path / "secrets.kdbx"
+    key_file_path = tmp_path / "secrets.keyx"
+    database_path.write_bytes(b"not-real-kdbx")
+    key_file_path.write_text("not-real-key-file", encoding="utf-8")
+    config_path = write_config(
+        tmp_path,
+        secrets_block=f"""
+provider: keepass
+keepass:
+  database_path: {database_path.as_posix()}
+  key_file_path: {key_file_path.as_posix()}
+  password_env_var: ""
+""".strip(),
+    )
+
+    result = run_preflight(str(config_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "passed"
+    assert result["status"] == "passed"
+
+
+def test_preflight_skips_keepass_file_checks_for_template_config(tmp_path: Path) -> None:
+    config_path = write_config(
+        tmp_path,
+        secrets_block="""
+provider: keepass
+keepass:
+  database_path: secrets/internal_audit_secrets.kdbx
+  key_file_path: secrets/internal_audit_secrets.keyx
+  password_env_var: ""
+""".strip(),
+    )
+    template_path = tmp_path / "config.production.template.yaml"
+    config_path.replace(template_path)
+
+    result = run_preflight(str(template_path))
+
+    provider_check = check_by_name(result, "secret_provider")
+    assert provider_check["status"] == "passed"
+    assert "template config" in provider_check["message"]

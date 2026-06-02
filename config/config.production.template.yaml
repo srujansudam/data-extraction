@@ -14,10 +14,20 @@ database:
   see_activation_key: ""
 
 secrets:
-  provider: keepass_cli # environment | keepass_cli
+  provider: keepass # environment | keepass | keepass_cli
+
+  keepass:
+    # Local KeePass/KeePassXC database created on the client VM.
+    database_path: secrets/internal_audit_secrets.kdbx
+
+    # Recommended unattended unlock method. Restrict this file with NTFS ACLs.
+    key_file_path: secrets/internal_audit_secrets.keyx
+
+    # Leave blank unless client IT approves secure environment variable management.
+    password_env_var: ""
 
   keepass_cli:
-    # Wrapper script can call KeePassXC CLI, KeePass/KPScript, or another client-approved local tool.
+    # Fallback only. Prefer direct secrets.provider: keepass.
     executable_path: "powershell.exe"
 
     # The wrapper must return JSON. Keep {secret_ref}; the app replaces it at runtime.
@@ -28,7 +38,7 @@ sources:
     type: oracle
     enabled: true
 
-    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
+    # KeePass entry title.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: ORION_DB_PROD
@@ -37,7 +47,7 @@ sources:
     type: oracle
     enabled: true
 
-    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
+    # KeePass entry title.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: FLEXCUBE_DB_PROD
@@ -46,7 +56,7 @@ sources:
     type: oracle
     enabled: true
 
-    # This should be the KeePass entry/reference consumed by get_keepass_secret.ps1.
+    # KeePass entry title.
     # Secret must return:
     # username, password, host, port, service_name
     secret_ref: HRIS_DB_PROD

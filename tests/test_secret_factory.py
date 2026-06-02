@@ -9,6 +9,7 @@ from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.secrets.providers import (
     EnvironmentSecretProvider,
     KeePassCliSecretProvider,
+    KeePassSecretProvider,
 )
 
 
@@ -36,6 +37,10 @@ logging:
   folder: logs
 secrets:
   provider: {provider}
+  keepass:
+    database_path: secrets/internal_audit_secrets.kdbx
+    key_file_path: secrets/internal_audit_secrets.keyx
+    password_env_var: ""
   keepass_cli:
     executable_path: powershell.exe
     command_template: -File scripts/get_keepass_secret.ps1 -SecretRef {{secret_ref}}
@@ -49,6 +54,7 @@ secrets:
     ("provider_name", "expected_type"),
     [
         ("environment", EnvironmentSecretProvider),
+        ("keepass", KeePassSecretProvider),
         ("keepass_cli", KeePassCliSecretProvider),
     ],
 )

@@ -26,6 +26,7 @@ REQUIRED_LOTUS_FILE_KEYS = [
 
 def run_preflight(config_path: str = "config/config.example.yaml") -> dict[str, object]:
     checks: list[dict[str, str]] = []
+    is_template_config = Path(config_path).name.endswith(".template.yaml")
 
     try:
         settings = load_settings(config_path)
@@ -49,8 +50,8 @@ def run_preflight(config_path: str = "config/config.example.yaml") -> dict[str, 
     )
     _check_directory_can_be_created(checks, "logging_folder", Path(settings.logging.folder))
     _check_database_encryption_config(checks, settings)
-    _check_secret_provider_config(checks, settings)
-    _check_database(checks, settings)
+    _check_secret_provider_config(checks, settings, is_template_config)
+    _check_database(checks, settings, is_template_config)
     _check_required_secret_refs(checks, settings)
     _check_lotus_excel_config(checks, settings)
 
@@ -74,11 +75,27 @@ def _check_directory_can_be_created(
     _add_pass(checks, name, f"Folder is available: {folder}")
 
 
-def _check_database(checks: list[dict[str, str]], settings: Settings) -> None:
+def _check_database(
+    checks: list[dict[str, str]],
+    settings: Settings,
+    is_template_config: bool,
+) -> None:
     encryption = settings.database.encryption.lower()
     if encryption not in {"none", "see"}:
         return
     if encryption == "see" and not settings.database.secret_ref:
+        return
+    if encryption == "see" and is_template_config:
+        _add_pass(
+            checks,
+            "database_key",
+            "SQLite SEE database key retrieval skipped for template config.",
+        )
+        _add_pass(
+            checks,
+            "database_schema",
+            "SQLite SEE database initialisation skipped for template config.",
+        )
         return
 
     database_key = None
@@ -149,7 +166,11 @@ def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings
         )
 
 
-def _check_secret_provider_config(checks: list[dict[str, str]], settings: Settings) -> None:
+def _check_secret_provider_config(
+    checks: list[dict[str, str]],
+    settings: Settings,
+    is_template_config: bool,
+) -> None:
     provider = settings.secrets.provider
     if provider == "environment":
         _add_pass(
@@ -157,6 +178,57 @@ def _check_secret_provider_config(checks: list[dict[str, str]], settings: Settin
             "secret_provider",
             "Using environment secret provider for local development.",
         )
+        return
+
+    if provider == "keepass":
+        keepass_config = settings.secrets.keepass
+        missing = []
+        if not keepass_config.database_path.strip():
+            missing.append("database_path")
+
+        has_key_file = bool(keepass_config.key_file_path and keepass_config.key_file_path.strip())
+        has_password_env = bool(
+            keepass_config.password_env_var and keepass_config.password_env_var.strip()
+        )
+        if not has_key_file and not has_password_env:
+            missing.append("key_file_path or password_env_var")
+
+        if missing:
+            _add_failure(
+                checks,
+                "secret_provider",
+                f"KeePass provider missing: {', '.join(missing)}",
+            )
+            return
+
+        if is_template_config:
+            _add_pass(
+                checks,
+                "secret_provider",
+                "KeePass provider is configured; file existence skipped for template config.",
+            )
+            return
+
+        database_path = Path(keepass_config.database_path)
+        if not database_path.exists():
+            _add_failure(
+                checks,
+                "secret_provider",
+                f"KeePass database file not found: {database_path}",
+            )
+            return
+
+        if has_key_file:
+            key_file_path = Path(keepass_config.key_file_path or "")
+            if not key_file_path.exists():
+                _add_failure(
+                    checks,
+                    "secret_provider",
+                    f"KeePass key file not found: {key_file_path}",
+                )
+                return
+
+        _add_pass(checks, "secret_provider", "KeePass provider is configured.")
         return
 
     if provider == "keepass_cli":

@@ -54,6 +54,12 @@ class LoggingConfig(BaseModel):
     folder: str = "logs"
 
 
+class KeePassConfig(BaseModel):
+    database_path: str = ""
+    key_file_path: str | None = None
+    password_env_var: str | None = None
+
+
 class KeePassCliConfig(BaseModel):
     executable_path: str = ""
     command_template: str = ""
@@ -61,6 +67,7 @@ class KeePassCliConfig(BaseModel):
 
 class SecretsConfig(BaseModel):
     provider: str = "environment"
+    keepass: KeePassConfig = Field(default_factory=KeePassConfig)
     keepass_cli: KeePassCliConfig = Field(default_factory=KeePassCliConfig)
 
 

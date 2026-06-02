@@ -17,7 +17,7 @@ Source systems:
 - Lotus Notes: either Excel extracts or Java CORBA client, switchable by config
 
 Secrets:
-- Production credentials will come from a local KeePass/KeePass-compatible CLI wrapper
+- Production credentials will come from a local KeePass/KeePassXC `.kdbx` database read with PyKeePass
 - Local development uses .env through EnvironmentSecretProvider
 - Do not hardcode credentials
 
