@@ -19,6 +19,9 @@ env/
 *.key
 *.pem
 *.pfx
+*.kdbx
+*.keyx
+config/diiop_ior.txt
 
 # Local data and logs
 data/

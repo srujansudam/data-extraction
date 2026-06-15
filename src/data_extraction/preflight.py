@@ -145,7 +145,15 @@ def _check_database_encryption_config(checks: list[dict[str, str]], settings: Se
         )
         return
 
-    _add_pass(checks, "database_encryption", f"Database encryption mode is supported: {encryption}")
+    if encryption == "see":
+        _add_pass(
+            checks,
+            "database_encryption",
+            "SQLite SEE encryption is configured; key and SEE runtime validation is required.",
+        )
+        return
+
+    _add_pass(checks, "database_encryption", "Database encryption mode is supported: none")
 
 
 def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings) -> None:
@@ -204,8 +212,19 @@ def _check_secret_provider_config(
         if is_template_config:
             _add_pass(
                 checks,
+                "keepass_database_path",
+                "KeePass database path is configured; existence skipped for template config.",
+            )
+            if has_key_file:
+                _add_pass(
+                    checks,
+                    "keepass_key_file_path",
+                    "KeePass key file path is configured; existence skipped for template config.",
+                )
+            _add_pass(
+                checks,
                 "secret_provider",
-                "KeePass provider is configured; file existence skipped for template config.",
+                "KeePass provider config is valid; file existence skipped for template config.",
             )
             return
 
@@ -217,6 +236,11 @@ def _check_secret_provider_config(
                 f"KeePass database file not found: {database_path}",
             )
             return
+        _add_pass(
+            checks,
+            "keepass_database_path",
+            f"KeePass database file is available: {database_path}",
+        )
 
         if has_key_file:
             key_file_path = Path(keepass_config.key_file_path or "")
@@ -227,8 +251,19 @@ def _check_secret_provider_config(
                     f"KeePass key file not found: {key_file_path}",
                 )
                 return
+            _add_pass(
+                checks,
+                "keepass_key_file_path",
+                f"KeePass key file is available: {key_file_path}",
+            )
+        else:
+            _add_pass(
+                checks,
+                "keepass_password_env_var",
+                "KeePass password environment variable name is configured.",
+            )
 
-        _add_pass(checks, "secret_provider", "KeePass provider is configured.")
+        _add_pass(checks, "secret_provider", "KeePass provider config is valid.")
         return
 
     if provider == "keepass_cli":
@@ -259,6 +294,35 @@ def _check_lotus_excel_config(checks: list[dict[str, str]], settings: Settings) 
     lotus_config = settings.sources.lotus_notes
     if not lotus_config.enabled:
         _add_pass(checks, "lotus_excel_files", "Lotus Notes source is disabled.")
+        return
+
+    if lotus_config.mode == "corba":
+        if not lotus_config.corba.enabled:
+            _add_failure(
+                checks,
+                "lotus_corba_config",
+                "Lotus mode is corba but lotus_notes.corba.enabled is false.",
+            )
+            return
+
+        missing_extracts = [
+            key
+            for key in REQUIRED_LOTUS_FILE_KEYS
+            if key.removeprefix("lotus_") not in lotus_config.corba.extracts
+        ]
+        if missing_extracts:
+            _add_failure(
+                checks,
+                "lotus_corba_config",
+                f"Missing Lotus CORBA extract configs: {', '.join(missing_extracts)}",
+            )
+            return
+
+        _add_pass(
+            checks,
+            "lotus_corba_config",
+            "Lotus CORBA config is present. Run test-lotus-corba for Java, file, and credential validation.",
+        )
         return
 
     if lotus_config.mode != "excel":

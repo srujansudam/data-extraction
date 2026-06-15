@@ -74,6 +74,7 @@ Recommended entries:
 - `FLEXCUBE_DB_PROD`
 - `HRIS_DB_PROD`
 - `INTERNAL_AUDIT_DB_KEY`
+- `LOTUS_NOTES_PROD` when Lotus CORBA is enabled
 
 The entry title must match the configured `secret_ref`.
 
@@ -95,6 +96,14 @@ SQLite SEE database key entry:
   - `key`
 
 If `INTERNAL_AUDIT_DB_KEY` has no custom `key` field, the application returns the entry password as `{"key": "<password>"}`.
+
+Lotus CORBA entry:
+
+- Title: `LOTUS_NOTES_PROD`
+- UserName: Lotus Notes username
+- Password: Lotus Notes password
+
+No host or port custom fields are required for this entry. The DIIOP endpoint is supplied through the client-provided IOR file.
 
 ## E. Generate The SEE DB Key
 
@@ -151,6 +160,14 @@ Test the SQLite SEE database key:
 ```
 
 `test-secret` logs only field names, never field values.
+
+After the source entries are validated, test Oracle connectivity:
+
+```powershell
+.\data-extraction.exe --config .\config\config.yaml test-source all
+```
+
+The command logs source names only and never logs KeePass credential values.
 
 ## H. Maintenance And Security
 

@@ -26,6 +26,26 @@ class SourceConfig(BaseModel):
     enabled: bool = True
 
 
+class LotusCorbaExtractConfig(BaseModel):
+    server: str | None = None
+    database: str
+    replica_id: str | None = None
+    view: str
+    columns: list[str]
+
+
+class LotusCorbaConfig(BaseModel):
+    enabled: bool = False
+    java_command: str = "java"
+    ior_file: str = "config/diiop_ior.txt"
+    jar_path: str = "java/lotus-corba-reader/lotus-corba-reader.jar"
+    notes_jar_path: str | None = "java/lib/notes.jar"
+    ncso_jar_path: str | None = "java/lib/ncso.jar"
+    output_folder: str = "data/lotus_notes/corba_output"
+    secret_ref: str | None = None
+    extracts: dict[str, LotusCorbaExtractConfig] = Field(default_factory=dict)
+
+
 class LotusNotesConfig(BaseModel):
     enabled: bool = True
     mode: str = Field(default="excel", pattern="^(excel|corba)$")
@@ -34,6 +54,7 @@ class LotusNotesConfig(BaseModel):
     files: dict[str, str] = Field(default_factory=dict)
     corba_java_command: str = "java"
     corba_jar_path: str = "java/lotus-corba-reader/dist/lotus-corba-reader.jar"
+    corba: LotusCorbaConfig = Field(default_factory=LotusCorbaConfig)
 
 
 class SourcesConfig(BaseModel):

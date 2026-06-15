@@ -28,6 +28,9 @@ C:\InternalAuditDataExtraction\
     sqlite-see\
   java\
     lotus-corba-reader\
+    lib\
+      notes.jar
+      ncso.jar
 ```
 
 Create the folder structure using:
@@ -48,8 +51,11 @@ Copy:
 - `data\`
 - `logs\`
 - SEE-enabled `sqlite3.dll` beside `data-extraction.exe`
+- optional Java CORBA reader source/jar and client-supplied Domino dependencies
 
 Do not copy `.env`, local development databases, local logs, test files, SEE source, SEE activation keys, or real credentials into the release bundle. The client-created `.kdbx` and `.keyx` files should be created or placed on the VM under the approved `secrets\` folder, not committed to the repository.
+
+Do not commit or include `notes.jar`, `ncso.jar`, or the real `diiop_ior.txt` in a generic release. BOV/client IT supplies them directly on the VM.
 
 ## 4. Config Setup
 
@@ -61,6 +67,8 @@ The production config should contain:
 - `secrets.provider: keepass`
 - KeePass secret references
 - Lotus Notes mode and file paths
+
+Create `config\config.yaml` from the production template. Only edit `config.yaml` for deployment-specific references, paths, Lotus filenames, and optional SEE activation configuration.
 
 Production database encryption should be:
 
@@ -92,6 +100,7 @@ Create KeePass entries with titles matching the configured secret refs:
 - `FLEXCUBE_DB_PROD`
 - `HRIS_DB_PROD`
 - `INTERNAL_AUDIT_DB_KEY`
+- `LOTUS_NOTES_PROD` when CORBA is enabled
 
 For Oracle source entries:
 
@@ -124,6 +133,11 @@ The SQLite SEE database key secret `INTERNAL_AUDIT_DB_KEY` should be stored as t
 
 The application logs only returned secret keys, never secret values.
 
+For `LOTUS_NOTES_PROD`:
+
+- UserName: Lotus Notes username
+- Password: Lotus Notes password
+
 Test each secret reference:
 
 ```powershell
@@ -131,6 +145,7 @@ Test each secret reference:
 .\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD
 .\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD
 .\data-extraction.exe --config .\config\config.yaml test-secret INTERNAL_AUDIT_DB_KEY
+.\data-extraction.exe --config .\config\config.yaml test-source all
 ```
 
 ## 6. First-Run Validation
@@ -149,11 +164,33 @@ Preflight status: passed
 
 For `encryption: see`, preflight also validates that the SEE-enabled `sqlite3.dll` accepts `PRAGMA textkey`.
 
+`test-source all` must report successful connectivity for ORION, Flexcube, and HRIS before the first extraction.
+
+If enabling CORBA, also run:
+
+```powershell
+.\data-extraction.exe --config .\config\config.yaml test-secret LOTUS_NOTES_PROD
+.\data-extraction.exe --config .\config\config.yaml test-lotus-corba
+```
+
+CORBA requires Java 8, `notes.jar`, `ncso.jar`, `diiop_ior.txt`, network access to `10.64.100.15:63148`, and read access to all five configured NSF EY views.
+
 Then initialise the database:
 
 ```powershell
 .\data-extraction.exe --config .\config\config.yaml init-db
 ```
+
+`init-db` creates the full local SQLite application schema, including extraction
+control tables, every source staging table, all final GIA model tables, and the
+active auditor workflow/review schema. It is safe to rerun and no manual SQLite
+table creation is required on the VM.
+
+The schema keeps `account_data` and `users` as unique canonical entity tables.
+Complete account/customer and user/customer/account relationships are stored in
+`account_customer_association` and `user_customer_account_association`.
+Scenarios requiring full relationship coverage must query those association
+tables rather than relying only on the canonical compatibility columns.
 
 ## 7. Dry-Run Validation
 
@@ -249,5 +286,5 @@ If the failure happened during initial load, rerun:
 
 ## 13. Known Pending Items
 
-- Java CORBA Lotus Notes integration
+- Java CORBA is an optional Phase 2 mode; Excel remains the default fallback
 - Final Power BI consumption pattern

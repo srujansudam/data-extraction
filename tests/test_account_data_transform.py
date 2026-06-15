@@ -37,23 +37,25 @@ def test_account_data_transform_loads_deduped_snapshot(tmp_path: Path) -> None:
             rows=[
                 {
                     "account_number": "ACC001",
-                    "account_currency": "Euro",
-                    "acc_designation": "Current",
-                    "customer_code": "C001",
-                    "account_opening_date": "2025-01-01",
-                },
-                {
-                    "account_number": "ACC001",
-                    "account_currency": "Euro",
-                    "acc_designation": "Current",
-                    "customer_code": "C001",
-                    "account_opening_date": "2025-01-01",
-                },
-                {
-                    "account_number": "ACC001",
-                    "account_currency": "Euro",
-                    "acc_designation": "Current",
+                    "account_currency": None,
+                    "acc_designation": None,
                     "customer_code": "C002",
+                    "account_opening_date": "2025-01-01",
+                },
+                {
+                    "account_number": "ACC001",
+                    "account_currency": "Euro",
+                    "acc_designation": "Current",
+                    "customer_code": "C001",
+                    "relationship_type": "Primary",
+                    "account_opening_date": "2025-01-01",
+                },
+                {
+                    "account_number": "ACC001",
+                    "account_currency": "Euro",
+                    "acc_designation": "Current",
+                    "customer_code": "C001",
+                    "relationship_type": "Primary",
                     "account_opening_date": "2025-01-01",
                 },
             ],
@@ -75,7 +77,7 @@ def test_account_data_transform_loads_deduped_snapshot(tmp_path: Path) -> None:
         )
 
         assert result.rows_read == 3
-        assert result.rows_inserted == 2
+        assert result.rows_inserted == 1
         assert rows == [
             {
                 "account_number": "ACC001",
@@ -83,11 +85,31 @@ def test_account_data_transform_loads_deduped_snapshot(tmp_path: Path) -> None:
                 "acc_designation": "Current",
                 "customer_code": "C001",
             },
+        ]
+        association_rows = db.query_all(
+            """
+            SELECT account_number, customer_code, relationship_type,
+                   source_system, source_run_id, extracted_at
+            FROM account_customer_association
+            ORDER BY customer_code
+            """
+        )
+        assert association_rows == [
             {
                 "account_number": "ACC001",
-                "account_currency": "Euro",
-                "acc_designation": "Current",
+                "customer_code": "C001",
+                "relationship_type": "Primary",
+                "source_system": "orion",
+                "source_run_id": str(run_id),
+                "extracted_at": "2026-05-26T00:00:00+02:00",
+            },
+            {
+                "account_number": "ACC001",
                 "customer_code": "C002",
+                "relationship_type": None,
+                "source_system": "orion",
+                "source_run_id": str(run_id),
+                "extracted_at": "2026-05-26T00:00:00+02:00",
             },
         ]
 
@@ -103,7 +125,7 @@ def test_account_data_transform_loads_deduped_snapshot(tmp_path: Path) -> None:
         assert job_row is not None
         assert job_row["status"] == "completed"
         assert job_row["rows_extracted"] == 3
-        assert job_row["rows_inserted"] == 2
+        assert job_row["rows_inserted"] == 1
     finally:
         db.close()
 
@@ -144,13 +166,30 @@ def test_account_data_transform_uses_current_run_id_and_refreshes_table(tmp_path
             """,
             ["STALE", None, None, "STALE"],
         )
+        db.execute(
+            """
+            INSERT INTO account_customer_association (
+                account_number,
+                customer_code
+            )
+            VALUES (?, ?)
+            """,
+            ["STALE", "STALE"],
+        )
         db.commit()
 
         job = AccountDataTransformJob(db=db, staging_reader=StagingReader(db))
         job.run(run_id=current_run_id, window_start=None, window_end=None)
 
         rows = db.query_all("SELECT account_number, customer_code FROM account_data")
+        association_rows = db.query_all(
+            """
+            SELECT account_number, customer_code
+            FROM account_customer_association
+            """
+        )
 
         assert rows == [{"account_number": "NEW", "customer_code": "C001"}]
+        assert association_rows == [{"account_number": "NEW", "customer_code": "C001"}]
     finally:
         db.close()

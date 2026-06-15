@@ -65,10 +65,10 @@ sources:
     enabled: true
 
     # Current supported mode is excel.
-    # corba is a placeholder/future integration and should not be used yet.
+    # Excel remains the default fallback. Enable CORBA only after VM validation.
     mode: excel # excel or corba
 
-    # Optional future secret ref for Lotus Notes/CORBA. Not used in excel mode.
+    # Legacy top-level ref retained for compatibility. CORBA uses corba.secret_ref.
     secret_ref: LOTUS_NOTES_PROD
 
     excel_input_folder: lotus_notes/incoming
@@ -80,8 +80,87 @@ sources:
       lotus_poa_revocation: lotus_notes/incoming/poa_revocation.xlsx
       lotus_discrepancies_management: lotus_notes/incoming/discrepancies_management.xlsx
 
-    corba_java_command: java
-    corba_jar_path: java/lotus-corba-reader/dist/lotus-corba-reader.jar
+    corba:
+      enabled: false
+      java_command: java
+      ior_file: config/diiop_ior.txt
+      jar_path: java/lotus-corba-reader/lotus-corba-reader.jar
+      notes_jar_path: java/lib/notes.jar
+      ncso_jar_path: java/lib/ncso.jar
+      output_folder: data/lotus_notes/corba_output
+      secret_ref: LOTUS_NOTES_PROD
+      extracts:
+        bov_employees:
+          server: Pinto/BOV
+          database: BOV\BOVADMIN.NSF
+          replica_id: C12562FA:003EC588
+          view: (EY - Employees)
+          columns:
+            - user_name
+            - obpm_no
+            - fcubs_no
+            - location
+            - staff_no
+        legal_rulings:
+          server: Pinto/BOV
+          database: BOV\LegalRulings.nsf
+          replica_id: C1256E4B:002152FC
+          view: (EY - LR)
+          columns:
+            - identity
+            - ref_no
+            - deceased_customer_code
+            - deceased_customer
+            - date_of_death
+            - notary
+            - notary_address
+        garnishee_orders:
+          server: Pinto/BOV
+          database: BOV\Garnishee.nsf
+          replica_id: C125688E:002A8BE6
+          view: (EY - GO)
+          columns:
+            - debtor_name
+            - identity
+            - address
+            - amount
+            - vide
+            - go_no
+            - ref_no
+            - date_issued
+            - creditor_details
+            - valid_to
+            - judicial_letter
+            - reply_to_jl
+            - status
+            - currency
+        poa_revocation:
+          server: Pinto/BOV
+          database: BOV\POARevok.nsf
+          replica_id: C1256D49:001CC46D
+          view: (EY - POA)
+          columns:
+            - date_of_circulation
+            - reference_no
+            - instructions_received_from
+            - given_by
+            - id_pp_no_given_by
+            - customer_code_given_by
+            - given_to
+            - details_of_poa
+        discrepancies_management:
+          server: Pinto/BOV
+          database: BOV\DiscrepanciesEURO.nsf
+          replica_id: C12572DC:002EE6B7
+          view: (EY - DiscrÃ©pancies)
+          columns:
+            - date
+            - amount
+            - net_amount
+            - classification
+            - gravity
+            - fraud_suspicion
+            - authorisation
 
 extraction:
   daily_mode: previous_day

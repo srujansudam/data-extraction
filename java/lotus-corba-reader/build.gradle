@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.bov.audit'
+version = '1.0.0'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compileOnly files('../lib/notes.jar', '../lib/ncso.jar')
+}
+
+application {
+    mainClass = 'com.bov.audit.lotus.LotusCorbaReader'
+}
+
+jar {
+    archiveBaseName = 'lotus-corba-reader'
+    archiveVersion = ''
+    manifest {
+        attributes 'Main-Class': application.mainClass.get()
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

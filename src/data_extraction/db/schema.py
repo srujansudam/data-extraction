@@ -109,6 +109,17 @@ MODEL_TABLE_SQL = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS account_customer_association (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_number TEXT NOT NULL,
+        customer_code TEXT NOT NULL,
+        relationship_type TEXT,
+        source_system TEXT,
+        source_run_id TEXT,
+        extracted_at DATETIME
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS dormant_account (
         account_number TEXT,
         date TEXT,
@@ -173,6 +184,17 @@ MODEL_TABLE_SQL = [
         departure_date TEXT,
         departure_details TEXT,
         location TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS user_customer_account_association (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_code TEXT NOT NULL,
+        customer_code TEXT,
+        account_number TEXT,
+        source_system TEXT,
+        source_run_id TEXT,
+        extracted_at DATETIME
     )
     """,
     """
@@ -283,6 +305,140 @@ MODEL_TABLE_SQL = [
     """,
 ]
 
+WORKFLOW_TABLE_SQL = [
+    """
+    CREATE TABLE IF NOT EXISTS scenario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scenario_encoded TEXT NOT NULL,
+        scenario_name TEXT,
+        scenario_description TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS triggers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scenario_id INTEGER NOT NULL,
+        trigger TEXT CHECK (
+            trigger IS NULL OR UPPER(trigger) IN (
+                'TRUE', 'FALSE', 'YES', 'NO', 'TRIGGERED', 'NOT_TRIGGERED',
+                'TRANSACTION', 'USER', 'BOTH', 'AUTOMATED', 'MANUAL'
+            )
+        ),
+        status TEXT CHECK (
+            status IS NULL OR UPPER(status) IN (
+                'NEW', 'PENDING', 'OPEN', 'IN_PROGRESS', 'IN PROGRESS',
+                'REVIEWED', 'APPROVED', 'REJECTED', 'CLOSED', 'COMPLETED'
+            )
+        ),
+        voucher_status TEXT CHECK (
+            voucher_status IS NULL OR UPPER(voucher_status) IN (
+                'PENDING', 'REQUESTED', 'RECEIVED', 'NOT_REQUESTED',
+                'NOT REQUESTED', 'NOT_AVAILABLE', 'NOT AVAILABLE',
+                'AVAILABLE', 'MISSING', 'REVIEWED'
+            )
+        ),
+        notes TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT,
+        FOREIGN KEY (scenario_id) REFERENCES scenario(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS trigger_transaction_association (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trigger_id INTEGER NOT NULL,
+        transaction_id TEXT NOT NULL,
+        FOREIGN KEY (trigger_id) REFERENCES triggers(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS trigger_user_association (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trigger_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        reason TEXT,
+        FOREIGN KEY (trigger_id) REFERENCES triggers(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS trigger_change_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trigger_id INTEGER NOT NULL,
+        changed_by TEXT,
+        changes TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (trigger_id) REFERENCES triggers(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level TEXT,
+        message TEXT NOT NULL,
+        username TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+]
+
+
+INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS ix_extraction_job_run_run_id ON extraction_job_run(run_id)",
+    "CREATE INDEX IF NOT EXISTS ix_extraction_error_log_run_id ON extraction_error_log(run_id)",
+    "CREATE INDEX IF NOT EXISTS ix_source_file_ingestion_run_id ON source_file_ingestion(run_id)",
+    "CREATE INDEX IF NOT EXISTS ix_data_quality_check_run_id ON data_quality_check(run_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_account_data_account_number "
+    "ON account_data(account_number)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_account_customer_association "
+    "ON account_customer_association(account_number, customer_code)",
+    "CREATE INDEX IF NOT EXISTS ix_account_customer_association_account "
+    "ON account_customer_association(account_number)",
+    "CREATE INDEX IF NOT EXISTS ix_account_customer_association_customer "
+    "ON account_customer_association(customer_code)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_customer_data_customer_code "
+    "ON customer_data(customer_code)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_users_user_code ON users(user_code)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_user_customer_account_association "
+    "ON user_customer_account_association(user_code, customer_code, account_number)",
+    "CREATE INDEX IF NOT EXISTS ix_user_customer_account_association_user "
+    "ON user_customer_account_association(user_code)",
+    "CREATE INDEX IF NOT EXISTS ix_user_customer_account_association_customer "
+    "ON user_customer_account_association(customer_code)",
+    "CREATE INDEX IF NOT EXISTS ix_user_customer_account_association_account "
+    "ON user_customer_account_association(account_number)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_credit_cards_transaction_reference "
+    "ON credit_cards(transaction_reference)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_loans_account_number ON loans(account_number)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_scenario_scenario_encoded "
+    "ON scenario(scenario_encoded)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_third_party_access_customer_account "
+    "ON third_party_access(customer_code, account_code)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_allowed_third_party_customer_account "
+    "ON allowed_third_party(customer_code, account_code)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_enquiry_business_key "
+    "ON enquiry(user_code, function_id, start_time, terminal_id, action)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_eom_book_balance_eom_account "
+    "ON eom_book_balance(eom_date, account_number)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_trigger_transaction "
+    "ON trigger_transaction_association(trigger_id, transaction_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_trigger_user "
+    "ON trigger_user_association(trigger_id, user_id)",
+    "CREATE INDEX IF NOT EXISTS ix_scenario_name ON scenario(scenario_name)",
+    "CREATE INDEX IF NOT EXISTS ix_triggers_scenario_id ON triggers(scenario_id)",
+    "CREATE INDEX IF NOT EXISTS ix_triggers_status ON triggers(status)",
+    "CREATE INDEX IF NOT EXISTS ix_triggers_voucher_status ON triggers(voucher_status)",
+    "CREATE INDEX IF NOT EXISTS ix_trigger_transaction_transaction_id "
+    "ON trigger_transaction_association(transaction_id)",
+    "CREATE INDEX IF NOT EXISTS ix_trigger_user_user_id "
+    "ON trigger_user_association(user_id)",
+    "CREATE INDEX IF NOT EXISTS ix_trigger_change_log_trigger_id "
+    "ON trigger_change_log(trigger_id)",
+    "CREATE INDEX IF NOT EXISTS ix_logs_username ON logs(username)",
+    "CREATE INDEX IF NOT EXISTS ix_logs_created_at ON logs(created_at)",
+]
+
 
 STAGING_TABLE_NAMES = [
     "stg_orion_accounts",
@@ -336,6 +492,7 @@ def create_model_tables(db: DatabaseAdapter) -> None:
     for sql in MODEL_TABLE_SQL:
         db.execute(sql)
 
+    _ensure_column(db, "office_accounts", "office_account_name", "TEXT")
     db.commit()
 
 
@@ -346,7 +503,36 @@ def create_staging_tables(db: DatabaseAdapter) -> None:
     db.commit()
 
 
+def create_workflow_tables(db: DatabaseAdapter) -> None:
+    for sql in WORKFLOW_TABLE_SQL:
+        db.execute(sql)
+
+    db.commit()
+
+
+def create_indexes(db: DatabaseAdapter) -> None:
+    for sql in INDEX_SQL:
+        db.execute(sql)
+
+    db.commit()
+
+
 def create_all_tables(db: DatabaseAdapter) -> None:
     create_tracking_tables(db)
     create_model_tables(db)
     create_staging_tables(db)
+    create_workflow_tables(db)
+    create_indexes(db)
+
+
+def _ensure_column(
+    db: DatabaseAdapter,
+    table_name: str,
+    column_name: str,
+    column_definition: str,
+) -> None:
+    columns = db.query_all(f"PRAGMA table_info({table_name})")
+    if any(column["name"] == column_name for column in columns):
+        return
+
+    db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")

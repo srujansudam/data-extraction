@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+from data_extraction.jobs.staging.lotus_corba import LotusCorbaStagingJob
 from data_extraction.pipeline.builder import PipelineJobBuilder
 from data_extraction.pipeline.definitions import (
     DIRECT_JOB_ORDER,
@@ -110,6 +111,24 @@ def test_missing_lotus_file_path_raises_clear_value_error(tmp_path: Path) -> Non
         match="Missing Lotus Excel file path for staging job 'lotus_legal_rulings'",
     ):
         builder.build_staging_jobs(["lotus_legal_rulings"])
+
+
+def test_corba_connector_builds_corba_staging_jobs_without_excel_paths(
+    tmp_path: Path,
+) -> None:
+    connector = object()
+    builder = PipelineJobBuilder(
+        db=SQLiteAdapter(str(tmp_path / "test.db")),
+        source_clients=source_clients(),
+        lotus_excel_file_paths={},
+        lotus_corba_connector=connector,  # type: ignore[arg-type]
+    )
+
+    jobs = builder.build_staging_jobs(["lotus_bov_employees"])
+
+    assert len(jobs) == 1
+    assert isinstance(jobs[0], LotusCorbaStagingJob)
+    assert jobs[0].dataset == "bov_employees"
 
 
 def _staging_definition_name(job_name: str) -> str:

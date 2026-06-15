@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from data_extraction.connectors.base import SourceQueryClient
+from data_extraction.connectors.lotus_corba import LotusCorbaConnector
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob
 from data_extraction.jobs.factory import create_job
@@ -13,6 +14,10 @@ from data_extraction.jobs.staging.factory import (
     create_hris_staging_job,
     create_lotus_excel_staging_job,
     create_orion_staging_job,
+)
+from data_extraction.jobs.staging.lotus_corba import (
+    LOTUS_CORBA_JOB_DATASETS,
+    LotusCorbaStagingJob,
 )
 from data_extraction.pipeline.definitions import (
     DIRECT_JOB_ORDER,
@@ -30,11 +35,13 @@ class PipelineJobBuilder:
         db: DatabaseAdapter,
         source_clients: dict[str, SourceQueryClient],
         lotus_excel_file_paths: dict[str, str],
+        lotus_corba_connector: LotusCorbaConnector | None = None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
         self.source_clients = source_clients
         self.lotus_excel_file_paths = lotus_excel_file_paths
+        self.lotus_corba_connector = lotus_corba_connector
         self.timezone = timezone
         self.staging_writer = StagingWriter(db)
 
@@ -103,6 +110,15 @@ class PipelineJobBuilder:
             )
 
         if job_name in LOTUS_EXCEL_STAGING_JOB_CLASSES:
+            if self.lotus_corba_connector is not None:
+                return LotusCorbaStagingJob(
+                    db=self.db,
+                    connector=self.lotus_corba_connector,
+                    staging_writer=self.staging_writer,
+                    job_name=job_name,
+                    dataset=LOTUS_CORBA_JOB_DATASETS[job_name],
+                    timezone=self.timezone,
+                )
             return create_lotus_excel_staging_job(
                 job_name=job_name,
                 db=self.db,

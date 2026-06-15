@@ -21,6 +21,25 @@ The final SQLite model includes:
 - legal_rulings
 - loans
 
+## Canonical entities and relationship coverage
+
+`account_data` and `users` are canonical entity tables used by the active
+auditor workflow/review schema:
+
+- `account_data` has one row per `account_number`.
+- `users` has one row per `user_code`.
+
+Their compatibility relationship columns contain one deterministic observed
+relationship. They do not replace the complete relationship sets:
+
+- `account_customer_association` preserves every distinct
+  `account_number + customer_code`.
+- `user_customer_account_association` preserves every distinct
+  `user_code + customer_code + account_number`.
+
+Scenario and review queries must use the association tables when full joint
+account, customer, or user-account coverage is required.
+
 ## Model updates agreed
 
 The proposed data model has been updated with:

@@ -11,6 +11,14 @@ from data_extraction.dev.dry_run import run_dry_pipeline
 from data_extraction.jobs.registry import list_jobs
 from data_extraction.pipeline.configured_run import run_configured_pipeline
 from data_extraction.pipeline.definitions import get_full_pipeline_order
+from data_extraction.pipeline.lotus_corba_run import (
+    extract_lotus_corba,
+    test_lotus_corba,
+)
+from data_extraction.pipeline.source_health import (
+    SUPPORTED_SOURCE_NAMES,
+    check_source_connections,
+)
 from data_extraction.preflight import run_preflight
 from data_extraction.secrets.factory import create_secret_provider
 from data_extraction.utils.logging import setup_logging
@@ -91,6 +99,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retrieve a configured secret and log returned keys only",
     )
     test_secret_parser.add_argument("secret_ref", help="Secret reference to test")
+
+    test_source_parser = subparsers.add_parser(
+        "test-source",
+        help="Test configured Oracle source connectivity",
+    )
+    test_source_parser.add_argument(
+        "source_name",
+        choices=(*SUPPORTED_SOURCE_NAMES, "all"),
+        help="Oracle source to test",
+    )
+
+    subparsers.add_parser(
+        "test-lotus-corba",
+        help="Validate optional Lotus Notes Java CORBA configuration",
+    )
+    subparsers.add_parser(
+        "extract-lotus-corba",
+        help="Extract Lotus Notes CORBA views into staging tables",
+    )
 
     return parser
 
@@ -193,6 +220,13 @@ def run_secret_test(config_path: str, secret_ref: str) -> None:
     logger.info("Secret '%s' returned keys: %s", secret_ref, ", ".join(sorted(secret)))
 
 
+def run_source_test(config_path: str, source_name: str) -> list[str]:
+    settings = load_settings(config_path)
+    setup_logging(settings.logging.level, settings.logging.folder)
+    secret_provider = create_secret_provider(settings)
+    return check_source_connections(settings, secret_provider, source_name)
+
+
 def _database_key_for_settings(settings, secret_provider) -> str | None:
     if settings.database.encryption.lower() != "see":
         return None
@@ -242,6 +276,18 @@ def main() -> None:
 
     if args.command == "test-secret":
         run_secret_test(config_path=args.config, secret_ref=args.secret_ref)
+        return
+
+    if args.command == "test-source":
+        run_source_test(config_path=args.config, source_name=args.source_name)
+        return
+
+    if args.command == "test-lotus-corba":
+        test_lotus_corba(config_path=args.config)
+        return
+
+    if args.command == "extract-lotus-corba":
+        extract_lotus_corba(config_path=args.config)
         return
 
     if args.command == "show-config" or args.command is None:

@@ -54,7 +54,7 @@ sources:
     mode: excel # excel | corba
 ```
 
-`corba` is reserved for future Java CORBA integration.
+Excel remains the default fallback. `corba` is a supported optional Phase 2 mode and should be enabled only after VM validation.
 
 Secret provider selection:
 
@@ -134,9 +134,13 @@ Never store real credentials in config.
 .\data-extraction.exe run-backfill
 .\data-extraction.exe run-dry-pipeline --reset-db
 .\data-extraction.exe test-secret ORION_DB_PROD
+.\data-extraction.exe test-source all
+.\data-extraction.exe test-lotus-corba
+.\data-extraction.exe extract-lotus-corba
 ```
 
 `test-secret` logs only returned field names, never secret values.
+`test-source` runs `SELECT 1 AS health_check FROM DUAL` and logs success or failure by source name only.
 
 ## F. Failed Extraction Recovery
 
@@ -170,12 +174,23 @@ Current mode is Excel ingestion. Required files:
 - `lotus_poa_revocation`
 - `lotus_discrepancies_management`
 
-Replace Excel files at the configured paths before running the pipeline. Future Java CORBA mode will use:
+Replace Excel files at the configured paths before running the pipeline. Optional Phase 2 CORBA uses:
 
 ```yaml
 lotus_notes:
   mode: corba
 ```
+
+CORBA prerequisites:
+
+- Java 8 runtime, preferably client-approved IBM Semeru/OpenJ9 8
+- `notes.jar` and `ncso.jar` supplied by BOV/client
+- `diiop_ior.txt` supplied by BOV/client
+- network access to `10.64.100.15:63148`
+- `LOTUS_NOTES_PROD` KeePass entry
+- read access to all five configured NSF databases and EY views
+
+Run `test-lotus-corba` before `extract-lotus-corba`. The test command validates files, Java, config, and credentials without connecting to Domino.
 
 ## I. Packaging And Deployment
 
@@ -192,8 +207,7 @@ Copy:
 - `data\`
 - `logs\`
 - `secrets\`
-- `scripts\get_keepass_secret.ps1`
-- `java\lotus-corba-reader\` when CORBA is implemented
+- `scripts\get_keepass_secret.ps1` only for `keepass_cli` fallback
 
 Do not copy local `.env`, development databases, local logs, test files, KeePass database files, KeePass master passwords, or key files.
 
@@ -201,5 +215,5 @@ Run `preflight` on the VM before the first real run. Preflight validates that SE
 
 ## J. Known Pending Items
 
-- Java CORBA implementation.
+- Java CORBA requires BOV/client runtime validation before enablement.
 - Power BI final consumption pattern.

@@ -318,6 +318,13 @@ keepass:
 
     provider_check = check_by_name(result, "secret_provider")
     assert provider_check["status"] == "passed"
+    assert provider_check["message"] == "KeePass provider config is valid."
+    database_path_check = check_by_name(result, "keepass_database_path")
+    assert database_path_check["status"] == "passed"
+    assert "database file is available" in database_path_check["message"]
+    key_file_check = check_by_name(result, "keepass_key_file_path")
+    assert key_file_check["status"] == "passed"
+    assert "key file is available" in key_file_check["message"]
     assert result["status"] == "passed"
 
 

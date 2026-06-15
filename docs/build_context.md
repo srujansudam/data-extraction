@@ -14,7 +14,7 @@ Source systems:
 - ORION: Oracle DB
 - Flexcube: Oracle DB
 - HRIS: Oracle views, accessed using API/DB credentials
-- Lotus Notes: either Excel extracts or Java CORBA client, switchable by config
+- Lotus Notes: Excel extracts by default; Java 8 CORBA is a supported optional Phase 2 mode
 
 Secrets:
 - Production credentials will come from a local KeePass/KeePassXC `.kdbx` database read with PyKeePass
@@ -22,8 +22,8 @@ Secrets:
 - Do not hardcode credentials
 
 Database:
-- SQLite for now through SQLiteAdapter
-- Final encryption decision pending: SQLCipher or SQLite SEE
+- SQLite through SQLiteAdapter
+- SQLite SEE is the selected production encryption approach
 - DB implementation must remain behind DatabaseAdapter
 - Do not make business jobs depend directly on sqlite3
 

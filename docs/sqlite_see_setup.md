@@ -6,6 +6,8 @@ SQLite SEE is used to encrypt the local Internal Audit SQLite database on the cl
 
 The application expects a SEE-enabled SQLite runtime. Normal Python `sqlite3` does not automatically use SEE. The application keys the database immediately after opening it using `PRAGMA textkey` and fails fast if SEE is not active or the key is not accepted.
 
+SQLite SEE is the selected production encryption approach. SQLCipher is not used. Lotus Notes defaults to Excel ingestion; Java 8 CORBA is a supported optional Phase 2 mode.
+
 ## B. What Must Be Obtained From Client/Licensing
 
 The licensed client must provide:

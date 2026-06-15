@@ -35,6 +35,9 @@ def test_pipeline_definitions_include_expected_staging_jobs_only() -> None:
         "hris_appendix_3_crm",
         "lotus_bov_employees",
         "lotus_legal_rulings",
+        "lotus_garnishee_orders",
+        "lotus_poa_revocation",
+        "lotus_discrepancies_management",
     ]
 
 

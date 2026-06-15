@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -27,11 +28,13 @@ class FakePipelineJobBuilder:
         db,
         source_clients: dict[str, SourceQueryClient],
         lotus_excel_file_paths: dict[str, str],
+        lotus_corba_connector=None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
         self.source_clients = source_clients
         self.lotus_excel_file_paths = lotus_excel_file_paths
+        self.lotus_corba_connector = lotus_corba_connector
         self.timezone = timezone
 
     def build_full_pipeline(
@@ -196,3 +199,12 @@ def test_configured_pipeline_runs_with_monkeypatched_source_clients(
     assert FakeFullPipelineRunner.last_call["window_start"] is not None
     assert FakeFullPipelineRunner.last_call["window_end"] is not None
     assert all(client.closed for client in clients.values())
+
+    connection = sqlite3.connect(tmp_path / "configured.db")
+    try:
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+        assert tables == []
+    finally:
+        connection.close()

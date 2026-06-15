@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from data_extraction.config.settings import Settings, load_settings
+from data_extraction.connectors.lotus_corba import LotusCorbaConnector
 from data_extraction.db.key_provider import get_database_key
-from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
 from data_extraction.pipeline.builder import PipelineJobBuilder
 from data_extraction.pipeline.full_runner import FullPipelineRunner
@@ -49,13 +49,19 @@ def run_configured_pipeline(
     db.connect()
 
     try:
-        create_all_tables(db)
         source_clients = build_oracle_source_clients(settings, secret_provider)
+        lotus_corba_connector = (
+            LotusCorbaConnector(settings.sources.lotus_notes.corba, secret_provider)
+            if settings.sources.lotus_notes.enabled
+            and settings.sources.lotus_notes.mode == "corba"
+            else None
+        )
 
         builder = PipelineJobBuilder(
             db=db,
             source_clients=source_clients,
             lotus_excel_file_paths=lotus_excel_file_paths,
+            lotus_corba_connector=lotus_corba_connector,
             timezone=settings.extraction.timezone,
         )
         direct_jobs, staging_jobs, transform_jobs = builder.build_full_pipeline()
@@ -94,8 +100,13 @@ def _validated_lotus_excel_file_paths(settings: Settings) -> dict[str, str]:
     if not lotus_config.enabled:
         return {}
 
+    if lotus_config.mode == "corba":
+        if not lotus_config.corba.enabled:
+            raise ValueError("Lotus Notes mode is 'corba' but lotus_notes.corba.enabled is false.")
+        return {}
+
     if lotus_config.mode != "excel":
-        raise ValueError("Configured pipeline currently supports Lotus Notes mode 'excel' only.")
+        raise ValueError("Lotus Notes mode must be one of: excel, corba.")
 
     missing_keys = [
         job_name for job_name in REQUIRED_LOTUS_EXCEL_JOBS if job_name not in lotus_config.files

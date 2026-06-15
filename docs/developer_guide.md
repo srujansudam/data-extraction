@@ -74,6 +74,24 @@ Never hardcode credentials. Use secret references in config and resolve them thr
 
 Keep schema changes in `src/data_extraction/db/schema.py`. Add tests that create the schema and verify tables/columns. Avoid destructive migrations until a migration strategy is defined.
 
+### Canonical Entity Tables
+
+`account_data` and `users` are canonical tables used by the active auditor
+workflow/review schema:
+
+- `account_data.account_number` is unique
+- `users.user_code` is unique
+
+Do not collapse source relationships into those canonical rows. Preserve full
+coverage in:
+
+- `account_customer_association`
+- `user_customer_account_association`
+
+Canonical transforms should merge non-empty attributes deterministically and use
+one observed relationship only for compatibility columns. Scenario logic that
+needs all joint-account or user-account links must use the association tables.
+
 ## Data Model Safety
 
 For final-table changes, update:

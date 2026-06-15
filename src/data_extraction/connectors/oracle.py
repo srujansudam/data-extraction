@@ -4,8 +4,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-import oracledb
-
 from data_extraction.secrets.base import SecretProvider
 
 
@@ -38,7 +36,7 @@ class OracleCredentials:
 class OracleConnector:
     def __init__(self, credentials: OracleCredentials) -> None:
         self.credentials = credentials
-        self.connection: oracledb.Connection | None = None
+        self.connection: Any | None = None
 
     @classmethod
     def from_secret_ref(
@@ -51,6 +49,8 @@ class OracleConnector:
         return cls(credentials)
 
     def connect(self) -> None:
+        import oracledb
+
         dsn = oracledb.makedsn(
             host=self.credentials.host,
             port=self.credentials.port,
@@ -83,7 +83,7 @@ class OracleConnector:
 
         return [dict(zip(column_names, row, strict=True)) for row in rows]
 
-    def _get_connection(self) -> oracledb.Connection:
+    def _get_connection(self) -> Any:
         if self.connection is None:
             raise RuntimeError("Oracle connection is not open. Call connect() first.")
 

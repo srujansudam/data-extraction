@@ -1,4 +1,7 @@
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 from data_extraction.db.schema import (
     STAGING_TABLE_NAMES,
@@ -7,6 +10,46 @@ from data_extraction.db.schema import (
     create_tracking_tables,
 )
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+
+
+TRACKING_TABLE_NAMES = {
+    "extraction_run",
+    "extraction_job_run",
+    "extraction_job_watermark",
+    "extraction_error_log",
+    "source_file_ingestion",
+    "data_quality_check",
+}
+
+MODEL_TABLE_NAMES = {
+    "account_data",
+    "account_customer_association",
+    "dormant_account",
+    "customer_data",
+    "third_party_access",
+    "allowed_third_party",
+    "related_parties",
+    "transaction_data",
+    "users",
+    "user_customer_account_association",
+    "staff",
+    "credit_cards",
+    "exchange_rate",
+    "enquiry",
+    "eom_book_balance",
+    "office_accounts",
+    "legal_rulings",
+    "loans",
+}
+
+WORKFLOW_TABLE_NAMES = {
+    "scenario",
+    "triggers",
+    "trigger_transaction_association",
+    "trigger_user_association",
+    "trigger_change_log",
+    "logs",
+}
 
 
 def get_table_names(db: SQLiteAdapter) -> set[str]:
@@ -31,12 +74,7 @@ def test_create_tracking_tables(tmp_path: Path) -> None:
 
         table_names = get_table_names(db)
 
-        assert "extraction_run" in table_names
-        assert "extraction_job_run" in table_names
-        assert "extraction_job_watermark" in table_names
-        assert "extraction_error_log" in table_names
-        assert "source_file_ingestion" in table_names
-        assert "data_quality_check" in table_names
+        assert TRACKING_TABLE_NAMES.issubset(table_names)
     finally:
         db.close()
 
@@ -51,22 +89,7 @@ def test_create_all_tables_includes_model_tables(tmp_path: Path) -> None:
 
         table_names = get_table_names(db)
 
-        assert "account_data" in table_names
-        assert "dormant_account" in table_names
-        assert "customer_data" in table_names
-        assert "third_party_access" in table_names
-        assert "allowed_third_party" in table_names
-        assert "related_parties" in table_names
-        assert "transaction_data" in table_names
-        assert "users" in table_names
-        assert "staff" in table_names
-        assert "credit_cards" in table_names
-        assert "exchange_rate" in table_names
-        assert "enquiry" in table_names
-        assert "eom_book_balance" in table_names
-        assert "office_accounts" in table_names
-        assert "legal_rulings" in table_names
-        assert "loans" in table_names
+        assert MODEL_TABLE_NAMES.issubset(table_names)
     finally:
         db.close()
 
@@ -119,6 +142,107 @@ def test_create_all_tables_includes_staging_tables(tmp_path: Path) -> None:
         db.close()
 
 
+def test_create_all_tables_includes_full_application_schema(tmp_path: Path) -> None:
+    db = SQLiteAdapter(str(tmp_path / "test.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+        create_all_tables(db)
+
+        expected_tables = (
+            TRACKING_TABLE_NAMES
+            | MODEL_TABLE_NAMES
+            | WORKFLOW_TABLE_NAMES
+            | set(STAGING_TABLE_NAMES)
+        )
+
+        assert expected_tables.issubset(get_table_names(db))
+    finally:
+        db.close()
+
+
+def test_workflow_tables_preserve_required_fields_and_checks(tmp_path: Path) -> None:
+    db = SQLiteAdapter(str(tmp_path / "test.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        trigger_user_columns = {
+            row["name"] for row in db.query_all("PRAGMA table_info(trigger_user_association)")
+        }
+        change_log_columns = {
+            row["name"] for row in db.query_all("PRAGMA table_info(trigger_change_log)")
+        }
+        log_columns = {row["name"] for row in db.query_all("PRAGMA table_info(logs)")}
+        triggers_sql = db.query_one(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'triggers'"
+        )
+
+        assert "reason" in trigger_user_columns
+        assert "changes" in change_log_columns
+        assert "username" in log_columns
+        assert triggers_sql is not None
+        assert triggers_sql["sql"].upper().count("CHECK") == 3
+    finally:
+        db.close()
+
+
+def test_relationship_tables_have_required_columns_and_indexes(tmp_path: Path) -> None:
+    db = SQLiteAdapter(str(tmp_path / "test.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+
+        account_columns = {
+            row["name"] for row in db.query_all("PRAGMA table_info(account_customer_association)")
+        }
+        user_columns = {
+            row["name"]
+            for row in db.query_all("PRAGMA table_info(user_customer_account_association)")
+        }
+        index_names = {
+            row["name"]
+            for row in db.query_all(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'index'
+                """
+            )
+        }
+
+        assert account_columns == {
+            "id",
+            "account_number",
+            "customer_code",
+            "relationship_type",
+            "source_system",
+            "source_run_id",
+            "extracted_at",
+        }
+        assert user_columns == {
+            "id",
+            "user_code",
+            "customer_code",
+            "account_number",
+            "source_system",
+            "source_run_id",
+            "extracted_at",
+        }
+        assert {
+            "ix_account_customer_association_account",
+            "ix_account_customer_association_customer",
+            "ix_user_customer_account_association_user",
+            "ix_user_customer_account_association_customer",
+            "ix_user_customer_account_association_account",
+        }.issubset(index_names)
+    finally:
+        db.close()
+
+
 def test_staging_tables_have_standard_columns(tmp_path: Path) -> None:
     db_path = tmp_path / "test.db"
     db = SQLiteAdapter(str(db_path))
@@ -144,6 +268,121 @@ def test_staging_tables_have_standard_columns(tmp_path: Path) -> None:
         assert columns["source_object"]["notnull"] == 1
         assert columns["source_payload"]["notnull"] == 1
         assert columns["extracted_at"]["dflt_value"] == "CURRENT_TIMESTAMP"
+    finally:
+        db.close()
+
+
+@pytest.mark.parametrize(
+    ("table_name", "columns", "values"),
+    [
+        ("account_data", "account_number", ["ACC1"]),
+        (
+            "account_customer_association",
+            "account_number, customer_code",
+            ["ACC1", "CUST1"],
+        ),
+        ("customer_data", "customer_code", ["CUST1"]),
+        ("users", "user_code", ["USER1"]),
+        (
+            "user_customer_account_association",
+            "user_code, customer_code, account_number",
+            ["USER1", "CUST1", "ACC1"],
+        ),
+        ("credit_cards", "transaction_reference", ["TX1"]),
+        ("loans", "account_number", ["ACC1"]),
+        ("scenario", "scenario_encoded", ["SCENARIO_1"]),
+        (
+            "third_party_access",
+            "customer_code, account_code",
+            ["CUST1", "ACC1"],
+        ),
+        (
+            "allowed_third_party",
+            "customer_code, account_code",
+            ["CUST1", "ACC1"],
+        ),
+        (
+            "enquiry",
+            "user_code, function_id, start_time, terminal_id, action",
+            ["USER1", "FUNC1", "2026-05-25 10:00:00", "TERM1", "EXECUTEQUERY"],
+        ),
+        (
+            "eom_book_balance",
+            "eom_date, account_number",
+            ["2026-05-31", "ACC1"],
+        ),
+    ],
+)
+def test_required_model_unique_constraints(
+    tmp_path: Path,
+    table_name: str,
+    columns: str,
+    values: list[str],
+) -> None:
+    db = SQLiteAdapter(str(tmp_path / f"{table_name}.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+        placeholders = ", ".join("?" for _ in values)
+        insert_sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+        db.execute(insert_sql, values)
+        db.commit()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db.execute(insert_sql, values)
+    finally:
+        db.close()
+
+
+def test_required_workflow_association_unique_constraints(tmp_path: Path) -> None:
+    db = SQLiteAdapter(str(tmp_path / "test.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+        db.execute(
+            "INSERT INTO scenario (scenario_encoded) VALUES (?)",
+            ["SCENARIO_1"],
+        )
+        db.execute(
+            "INSERT INTO triggers (scenario_id, status) VALUES (?, ?)",
+            [1, "NEW"],
+        )
+        db.execute(
+            """
+            INSERT INTO trigger_transaction_association (trigger_id, transaction_id)
+            VALUES (?, ?)
+            """,
+            [1, "TX1"],
+        )
+        db.execute(
+            """
+            INSERT INTO trigger_user_association (trigger_id, user_id, reason)
+            VALUES (?, ?, ?)
+            """,
+            [1, "USER1", "review"],
+        )
+        db.commit()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db.execute(
+                """
+                INSERT INTO trigger_transaction_association (trigger_id, transaction_id)
+                VALUES (?, ?)
+                """,
+                [1, "TX1"],
+            )
+        db.rollback()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            db.execute(
+                """
+                INSERT INTO trigger_user_association (trigger_id, user_id)
+                VALUES (?, ?)
+                """,
+                [1, "USER1"],
+            )
     finally:
         db.close()
 
