@@ -10,6 +10,17 @@ From a development machine with the project dependencies installed:
 
 The script runs `pytest`, runs `ruff check .`, then builds `dist\data-extraction.exe` with PyInstaller. It does not package real config files, secrets, SQLite database files, or logs.
 
+The PyInstaller spec explicitly bundles `cryptography`, `cffi`, and
+`oracledb` support modules. Oracle python-oracledb thin mode requires
+`cryptography` at runtime. If a VM reports:
+
+```text
+python-oracledb thin mode cannot be used because the cryptography package cannot be imported
+```
+
+rebuild the executable from a clean `build\` and `dist\` using
+`.\scripts\build_exe.ps1`, then recreate the release bundle.
+
 ## Files To Copy To The Client VM
 
 Copy these deployment assets:
@@ -39,6 +50,7 @@ For KeePass setup, follow [keepass_setup.md](keepass_setup.md).
 
 ```powershell
 .\data-extraction.exe preflight
+.\data-extraction.exe diagnose-runtime
 .\data-extraction.exe test-secret ORION_DB_PROD
 .\data-extraction.exe test-source all
 .\data-extraction.exe test-lotus-corba

@@ -129,6 +129,7 @@ Never store real credentials in config.
 
 ```powershell
 .\data-extraction.exe preflight
+.\data-extraction.exe diagnose-runtime
 .\data-extraction.exe init-db
 .\data-extraction.exe run-daily
 .\data-extraction.exe run-backfill
@@ -141,6 +142,9 @@ Never store real credentials in config.
 
 `test-secret` logs only returned field names, never secret values.
 `test-source` runs `SELECT 1 AS health_check FROM DUAL` and logs success or failure by source name only.
+`diagnose-runtime` verifies that packaged runtime imports for `cryptography`,
+`cffi`, and `oracledb` succeed. Oracle python-oracledb thin mode requires
+`cryptography` in the executable.
 
 ## F. Failed Extraction Recovery
 
@@ -154,6 +158,11 @@ Check:
 For a failed daily run, fix the underlying cause and rerun `run-daily`. Use `run-backfill` when the historical window needs to be rebuilt or a schema/source issue affected multiple days.
 
 If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password.
+
+If Oracle source testing fails with `python-oracledb thin mode cannot be used
+because the cryptography package cannot be imported`, rebuild the executable
+with the current PyInstaller spec so `cryptography` and `cffi` are bundled, then
+rerun `diagnose-runtime` and `test-source all`.
 
 ## G. Logs And Tracking Tables
 

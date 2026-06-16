@@ -18,15 +18,15 @@ pytest
 Write-Host "Running Ruff..."
 ruff check .
 
+Write-Host "Removing previous build outputs..."
+if (Test-Path "build") {
+  Remove-Item "build" -Recurse -Force
+}
+if (Test-Path "dist") {
+  Remove-Item "dist" -Recurse -Force
+}
+
 Write-Host "Building executable with PyInstaller..."
-pyinstaller `
-  --clean `
-  --onefile `
-  --name data-extraction `
-  --paths src `
-  --exclude-module pytest `
-  --exclude-module tests `
-  --collect-submodules data_extraction `
-  src\data_extraction\main.py
+pyinstaller --clean data-extraction.spec
 
 Write-Host "Build complete: dist/data-extraction.exe"

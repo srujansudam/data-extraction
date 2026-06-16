@@ -164,6 +164,17 @@ Preflight status: passed
 
 For `encryption: see`, preflight also validates that the SEE-enabled `sqlite3.dll` accepts `PRAGMA textkey`.
 
+Run the packaged runtime diagnostic:
+
+```powershell
+.\data-extraction.exe --config .\config\config.yaml diagnose-runtime
+```
+
+This must report successful imports for `cryptography`, `cffi`, and `oracledb`.
+Oracle python-oracledb thin mode requires `cryptography` bundled in the
+executable. If the VM reports that thin mode cannot import `cryptography`,
+rebuild with the current PyInstaller spec and recreate the release bundle.
+
 `test-source all` must report successful connectivity for ORION, Flexcube, and HRIS before the first extraction.
 
 If enabling CORBA, also run:

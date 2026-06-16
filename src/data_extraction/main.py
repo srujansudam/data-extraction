@@ -64,6 +64,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run local production readiness checks",
     )
 
+    subparsers.add_parser(
+        "diagnose-runtime",
+        help="Verify packaged runtime imports required Oracle thin-mode dependencies",
+    )
+
     dry_pipeline_parser = subparsers.add_parser(
         "run-dry-pipeline",
         help="Run the local development dry-run pipeline",
@@ -218,6 +223,22 @@ def print_preflight(config_path: str) -> None:
     logger.info("Preflight status: %s", result["status"])
 
 
+def diagnose_runtime(config_path: str) -> dict[str, str]:
+    settings = load_settings(config_path)
+    setup_logging(settings.logging.level, settings.logging.folder)
+
+    diagnostics = {
+        "cryptography": _import_package_version("cryptography"),
+        "cffi": _import_package_version("cffi"),
+        "oracledb": _import_package_version("oracledb"),
+    }
+    for package_name, version in diagnostics.items():
+        logger.info("Runtime dependency import succeeded: %s %s", package_name, version)
+
+    logger.info("Runtime diagnostics completed successfully")
+    return diagnostics
+
+
 def run_secret_test(config_path: str, secret_ref: str) -> None:
     settings = load_settings(config_path)
     setup_logging(settings.logging.level, settings.logging.folder)
@@ -231,6 +252,11 @@ def run_source_test(config_path: str, source_name: str) -> list[str]:
     setup_logging(settings.logging.level, settings.logging.folder)
     secret_provider = create_secret_provider(settings)
     return check_source_connections(settings, secret_provider, source_name)
+
+
+def _import_package_version(package_name: str) -> str:
+    module = __import__(package_name)
+    return str(getattr(module, "__version__", "unknown"))
 
 
 def _database_key_for_settings(settings, secret_provider) -> str | None:
@@ -258,6 +284,10 @@ def main() -> None:
 
     if args.command == "preflight":
         print_preflight(args.config)
+        return
+
+    if args.command == "diagnose-runtime":
+        diagnose_runtime(args.config)
         return
 
     if args.command == "run-dry-pipeline":

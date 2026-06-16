@@ -1,14 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
 hiddenimports = []
 hiddenimports += collect_submodules('data_extraction')
+hiddenimports += collect_submodules('cryptography')
+hiddenimports += collect_submodules('cffi')
+hiddenimports += collect_submodules('oracledb')
+
+try:
+    hiddenimports += collect_submodules('bcrypt')
+except Exception:
+    pass
+
+binaries = []
+binaries += collect_dynamic_libs('cryptography')
+binaries += collect_dynamic_libs('cffi')
+
+try:
+    binaries += collect_dynamic_libs('bcrypt')
+except Exception:
+    pass
 
 
 a = Analysis(
     ['src\\data_extraction\\main.py'],
     pathex=['src'],
-    binaries=[],
+    binaries=binaries,
     datas=[],
     hiddenimports=hiddenimports,
     hookspath=[],

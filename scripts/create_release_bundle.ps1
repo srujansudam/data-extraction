@@ -80,16 +80,19 @@ Next steps on client VM:
    notes.jar, ncso.jar, diiop_ior.txt, LOTUS_NOTES_PROD, and update config.yaml.
 10. Run:
    .\data-extraction.exe --config .\config\config.yaml preflight
-11. Test secrets:
+11. Verify packaged runtime dependencies for Oracle thin mode:
+   .\data-extraction.exe --config .\config\config.yaml diagnose-runtime
+   This must import cryptography, cffi, and oracledb successfully. If python-oracledb thin mode reports that cryptography cannot be imported, rebuild with the current PyInstaller spec and recreate this release bundle.
+12. Test secrets:
    .\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD 
    .\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD 
    .\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD 
    .\data-extraction.exe --config .\config\config.yaml test-secret INTERNAL_AUDIT_DB_KEY
-12. Test all Oracle source connections:
+13. Test all Oracle source connections:
    .\data-extraction.exe --config .\config\config.yaml test-source all
-13. Run initial backfill:
+14. Run initial backfill:
    .\data-extraction.exe --config .\config\config.yaml run-backfill
-14. Schedule daily run:
+15. Schedule daily run:
    .\data-extraction.exe --config .\config\config.yaml run-daily
 
 SEE binaries, SEE source code, activation keys, database keys, KeePass databases, master passwords, key files, notes.jar, ncso.jar, diiop_ior.txt, passwords, and real Lotus exports are not included in this release bundle. Java CORBA is an optional Phase 2 mode; Excel remains the default fallback. The scripts\get_keepass_secret.ps1 wrapper remains available only as keepass_cli fallback. See docs\solution_finalisation.md, docs\sqlite_see_setup.md, and docs\keepass_setup.md.
