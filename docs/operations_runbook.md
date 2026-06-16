@@ -164,6 +164,13 @@ If a Lotus Excel file is missing, place the expected file in the configured path
 - `source_file_ingestion`: reserved for source file ingestion tracking.
 - `data_quality_check`: reserved for quality checks.
 
+Application logs are written to the configured `logging.folder` as
+`data_extraction.log`. The file rotates by size at 10 MB and keeps up to 30
+backup files. Console logging remains enabled for manual runs. Logs include run,
+job, source, target table, duration, row counts, and sanitized exception
+messages. Secret values and credential-bearing connection strings must not be
+logged.
+
 ## H. Lotus Notes Mode
 
 Current mode is Excel ingestion. Required files:

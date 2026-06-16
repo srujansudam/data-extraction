@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from data_extraction.db.adapter import DatabaseAdapter
+from data_extraction.utils.redaction import redact_secret_values
 
 
 class ExtractionErrorLogger:
@@ -36,8 +37,8 @@ class ExtractionErrorLogger:
                 job_name,
                 source_system,
                 error_type,
-                error_message,
-                error_detail,
+                redact_secret_values(error_message),
+                redact_secret_values(error_detail) if error_detail is not None else None,
             ],
         )
         self.db.commit()

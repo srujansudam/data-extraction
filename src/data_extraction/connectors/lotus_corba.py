@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 from pathlib import Path
 
 from data_extraction.config.settings import LotusCorbaConfig, LotusCorbaExtractConfig
 from data_extraction.secrets.base import SecretProvider
+from data_extraction.utils.redaction import redact_secret_values
 
 REQUIRED_CORBA_DATASETS = (
     "bov_employees",
@@ -15,6 +17,8 @@ REQUIRED_CORBA_DATASETS = (
     "discrepancies_management",
 )
 LOTUS_READER_MAIN_CLASS = "com.bov.audit.lotus.LotusCorbaReader"
+
+logger = logging.getLogger(__name__)
 
 
 class LotusCorbaConnector:
@@ -72,7 +76,7 @@ class LotusCorbaConnector:
             username=username,
             password=password,
         )
-        self._run_extract(command, dataset)
+        self._run_extract(command, dataset, extract_config, output_path, [username, password])
         if not output_path.exists() or output_path.stat().st_size == 0:
             raise RuntimeError(f"Lotus CORBA extraction produced no output for dataset: {dataset}")
         return output_path
@@ -167,7 +171,22 @@ class LotusCorbaConnector:
         return command
 
     @staticmethod
-    def _run_extract(command: list[str], dataset: str) -> None:
+    def _run_extract(
+        command: list[str],
+        dataset: str,
+        extract_config: LotusCorbaExtractConfig,
+        output_path: Path,
+        secret_values: list[str],
+    ) -> None:
+        logger.info(
+            "Lotus CORBA Java command started | dataset=%s database=%s view=%s output_file=%s "
+            "command=%s",
+            dataset,
+            extract_config.database,
+            extract_config.view,
+            output_path,
+            _safe_command_for_log(command),
+        )
         try:
             result = subprocess.run(
                 command,
@@ -180,6 +199,15 @@ class LotusCorbaConnector:
                 f"Lotus CORBA Java process could not start for dataset: {dataset}"
             ) from exc
 
+        logger.info(
+            "Lotus CORBA Java command completed | dataset=%s output_file=%s exit_code=%s "
+            "stdout=%s stderr=%s",
+            dataset,
+            output_path,
+            result.returncode,
+            redact_secret_values(result.stdout or "", secret_values=secret_values),
+            redact_secret_values(result.stderr or "", secret_values=secret_values),
+        )
         if result.returncode != 0:
             raise RuntimeError(
                 "Lotus CORBA extraction failed for "
@@ -194,3 +222,13 @@ class LotusCorbaConnector:
             raise ValueError(f"{description} path is required.")
         if not Path(path).is_file():
             raise FileNotFoundError(f"{description} not found: {path}")
+
+
+def _safe_command_for_log(command: list[str]) -> list[str]:
+    safe_command = list(command)
+    for sensitive_option in ("--password", "--username"):
+        if sensitive_option in safe_command:
+            value_index = safe_command.index(sensitive_option) + 1
+            if value_index < len(safe_command):
+                safe_command[value_index] = "[REDACTED]"
+    return safe_command

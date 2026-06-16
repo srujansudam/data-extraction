@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from data_extraction.connectors.lotus_corba import LotusCorbaConnector
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob, JobResult
@@ -16,6 +18,8 @@ LOTUS_CORBA_JOB_DATASETS = {
     "lotus_poa_revocation": "poa_revocation",
     "lotus_discrepancies_management": "discrepancies_management",
 }
+
+logger = logging.getLogger(__name__)
 
 
 class LotusCorbaStagingJob(BaseExtractionJob):
@@ -39,14 +43,35 @@ class LotusCorbaStagingJob(BaseExtractionJob):
         self.target_table = self.staging_table
 
     def execute(self, window_start: str | None, window_end: str | None) -> JobResult:
+        logger.info(
+            "Lotus CORBA staging extraction started | job_name=%s dataset=%s staging_table=%s",
+            self.job_name,
+            self.dataset,
+            self.staging_table,
+        )
         output_path = self.connector.extract_dataset(self.dataset)
         rows = read_corba_rows(output_path)
+        logger.info(
+            "Lotus CORBA output loaded | job_name=%s dataset=%s output_file=%s rows_loaded=%s",
+            self.job_name,
+            self.dataset,
+            output_path,
+            len(rows),
+        )
         inserted = self.staging_writer.write_rows(
             staging_table=self.staging_table,
             run_id=self._current_run_id,
             source_system=self.source_system,
             source_object=self.source_object,
             rows=rows,
+        )
+        logger.info(
+            "Lotus CORBA staging write completed | job_name=%s dataset=%s staging_table=%s "
+            "rows_written=%s",
+            self.job_name,
+            self.dataset,
+            self.staging_table,
+            inserted,
         )
         return JobResult(
             rows_extracted=len(rows),

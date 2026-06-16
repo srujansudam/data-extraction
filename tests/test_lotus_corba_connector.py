@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from pathlib import Path
 
@@ -159,6 +160,7 @@ def test_lotus_corba_extract_builds_safe_commands_and_outputs_files(
 def test_lotus_corba_failure_does_not_leak_password(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     def fake_run(args, capture_output, check, text):
         if "-version" in args:
@@ -173,10 +175,15 @@ def test_lotus_corba_failure_does_not_leak_password(
     monkeypatch.setattr(subprocess, "run", fake_run)
     connector = LotusCorbaConnector(create_config(tmp_path), FakeSecretProvider())
 
+    caplog.set_level(logging.INFO)
     with pytest.raises(RuntimeError) as exc_info:
         connector.extract_all()
 
     assert "super-secret-lotus-password" not in str(exc_info.value)
+    assert "super-secret-lotus-password" not in caplog.text
+    assert "--password', '[REDACTED]'" in caplog.text
+    assert "[REDACTED]" in caplog.text
+    assert "exit_code=2" in caplog.text
 
 
 def test_lotus_corba_secret_failure_does_not_leak_password(

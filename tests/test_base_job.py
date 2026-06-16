@@ -34,6 +34,15 @@ class FailingDummyJob(BaseExtractionJob):
         raise ValueError("dummy job failed")
 
 
+class SecretFailingDummyJob(BaseExtractionJob):
+    job_name = "dummy_secret_failure"
+    source_system = "test_source"
+    target_table = "test_table"
+
+    def execute(self, window_start: str | None, window_end: str | None) -> JobResult:
+        raise ValueError("dummy job failed password=super-secret-password")
+
+
 def create_test_run(db: SQLiteAdapter) -> int:
     run_tracker = ExtractionRunTracker(db)
     return run_tracker.start_run(
@@ -146,5 +155,37 @@ def test_failing_base_job_tracks_failure_and_error_log(tmp_path: Path) -> None:
         assert error_row["source_system"] == "test_source"
         assert error_row["error_type"] == "ValueError"
         assert error_row["error_message"] == "dummy job failed"
+    finally:
+        db.close()
+
+
+def test_failing_base_job_logs_sanitized_error(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_tracking_tables(db)
+        run_id = create_test_run(db)
+
+        job = SecretFailingDummyJob(db)
+
+        with pytest.raises(ValueError, match="super-secret-password"):
+            job.run(run_id=run_id, window_start=None, window_end=None)
+
+        log_text = caplog.text
+        error_row = db.query_one(
+            """
+            SELECT error_message
+            FROM extraction_error_log
+            WHERE job_name = ?
+            """,
+            ["dummy_secret_failure"],
+        )
+
+        assert error_row is not None
+        assert error_row["error_message"] == "dummy job failed password=[REDACTED]"
+        assert "dummy job failed password=[REDACTED]" in log_text
+        assert "super-secret-password" not in log_text
     finally:
         db.close()

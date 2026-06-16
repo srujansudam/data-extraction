@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ import pandas as pd
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob, JobResult
 from data_extraction.staging.writer import StagingWriter
+
+logger = logging.getLogger(__name__)
 
 
 class ExcelToStagingJob(BaseExtractionJob):
@@ -35,12 +38,37 @@ class ExcelToStagingJob(BaseExtractionJob):
 
     def execute(self, window_start: str | None, window_end: str | None) -> JobResult:
         path = Path(self.file_path)
+        logger.info(
+            "Lotus Excel file expected | job_name=%s source_object=%s staging_table=%s file_path=%s",
+            self.job_name,
+            self.source_object,
+            self.staging_table,
+            path,
+        )
         if not path.exists():
+            logger.error(
+                "Lotus Excel file missing | job_name=%s source_object=%s file_path=%s",
+                self.job_name,
+                self.source_object,
+                path,
+            )
             raise FileNotFoundError(self.file_path)
 
+        logger.info(
+            "Lotus Excel file found | job_name=%s source_object=%s file_path=%s",
+            self.job_name,
+            self.source_object,
+            path,
+        )
         sheet_name: str | int = 0 if self.sheet_name is None else self.sheet_name
         dataframe = pd.read_excel(path, sheet_name=sheet_name)
         rows = _dataframe_to_rows(dataframe)
+        logger.info(
+            "Lotus Excel rows loaded | job_name=%s source_object=%s rows_loaded=%s",
+            self.job_name,
+            self.source_object,
+            len(rows),
+        )
 
         rows_written = self.staging_writer.write_rows(
             staging_table=self.staging_table,
@@ -48,6 +76,14 @@ class ExcelToStagingJob(BaseExtractionJob):
             source_system=self.source_system,
             source_object=self.source_object,
             rows=rows,
+        )
+        logger.info(
+            "Lotus Excel staging write completed | job_name=%s staging_table=%s rows_written=%s "
+            "rows_rejected=%s",
+            self.job_name,
+            self.staging_table,
+            rows_written,
+            0,
         )
 
         return JobResult(

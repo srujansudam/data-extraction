@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.staging.reader import StagingReader
 from data_extraction.transform.base import BaseTransformJob, TransformResult
+
+logger = logging.getLogger(__name__)
 
 
 class AccountDataTransformJob(BaseTransformJob):
@@ -64,6 +67,16 @@ class AccountDataTransformJob(BaseTransformJob):
             association_rows,
         )
         self.db.commit()
+
+        logger.info(
+            "account_data transform summary | run_id=%s rows_read=%s canonical_rows=%s "
+            "account_customer_association_rows=%s merge_behavior=%s",
+            run_id,
+            len(rows),
+            len(insert_rows),
+            len(association_rows),
+            "deterministic_non_null_preference",
+        )
 
         return TransformResult(
             rows_read=len(rows),

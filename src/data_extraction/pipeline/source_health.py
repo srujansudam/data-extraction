@@ -5,6 +5,7 @@ import logging
 from data_extraction.config.settings import Settings
 from data_extraction.connectors.oracle import OracleConnector
 from data_extraction.secrets.base import SecretProvider
+from data_extraction.utils.redaction import sanitize_exception, secret_values_from_mappings
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,12 @@ def check_source_connections(
 
     for current_source in source_names:
         connector: OracleConnector | None = None
-        source_failed = False
+        failure: Exception | None = None
+        observed_secrets: list[dict[str, str]] = []
+        recording_secret_provider = _RecordingSecretProvider(
+            secret_provider,
+            observed_secrets,
+        )
         try:
             source_config = getattr(settings.sources, current_source)
             if not source_config.enabled:
@@ -32,23 +38,29 @@ def check_source_connections(
                 raise ValueError(f"Source '{current_source}' is missing secret_ref.")
 
             connector = OracleConnector.from_secret_ref(
-                secret_provider=secret_provider,
+                secret_provider=recording_secret_provider,
                 secret_ref=source_config.secret_ref,
             )
             connector.connect()
             connector.query_all(HEALTH_CHECK_SQL)
-        except Exception:
-            source_failed = True
+        except Exception as exc:
+            failure = exc
         finally:
             if connector is not None:
                 try:
                     connector.close()
-                except Exception:
-                    source_failed = True
+                except Exception as exc:
+                    if failure is None:
+                        failure = exc
 
-        if source_failed:
+        if failure is not None:
             failed_sources.append(current_source)
-            logger.error("Source connectivity failed: %s", current_source)
+            logger.error(
+                "Source connectivity failed: %s - %s: %s",
+                current_source,
+                type(failure).__name__,
+                sanitize_exception(failure, secret_values_from_mappings(observed_secrets)),
+            )
         else:
             successful_sources.append(current_source)
             logger.info("Source connectivity succeeded: %s", current_source)
@@ -59,6 +71,20 @@ def check_source_connections(
 
     return successful_sources
 
+
+class _RecordingSecretProvider:
+    def __init__(
+        self,
+        secret_provider: SecretProvider,
+        observed_secrets: list[dict[str, str]],
+    ) -> None:
+        self.secret_provider = secret_provider
+        self.observed_secrets = observed_secrets
+
+    def get_secret(self, secret_ref: str) -> dict[str, str]:
+        secret = self.secret_provider.get_secret(secret_ref)
+        self.observed_secrets.append(secret)
+        return secret
 
 def _resolve_source_names(source_name: str) -> tuple[str, ...]:
     normalized_name = source_name.lower()

@@ -194,10 +194,16 @@ def print_pipeline_order(config_path: str) -> None:
 
 
 def print_preflight(config_path: str) -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
-    )
+    try:
+        settings = load_settings(config_path)
+    except Exception:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+        )
+    else:
+        setup_logging(settings.logging.level, settings.logging.folder)
+
     result = run_preflight(config_path)
     checks = result["checks"]
     if isinstance(checks, list):

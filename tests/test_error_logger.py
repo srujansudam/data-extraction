@@ -107,3 +107,36 @@ def test_log_error_can_create_run_level_error_without_job(tmp_path: Path) -> Non
         assert row["error_message"] == "Test run failed"
     finally:
         db.close()
+
+
+def test_log_error_redacts_sensitive_values(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = SQLiteAdapter(str(db_path))
+    db.connect()
+
+    try:
+        create_tracking_tables(db)
+
+        error_logger = ExtractionErrorLogger(db)
+        error_id = error_logger.log_error(
+            error_type="DatabaseError",
+            error_message="ORA-01017 password=super-secret-password",
+            error_detail="Authorization: Bearer secret-token",
+        )
+
+        row = db.query_one(
+            """
+            SELECT error_message, error_detail
+            FROM extraction_error_log
+            WHERE error_id = ?
+            """,
+            [error_id],
+        )
+
+        assert row is not None
+        assert row["error_message"] == "ORA-01017 password=[REDACTED]"
+        assert row["error_detail"] == "Authorization: [REDACTED]"
+        assert "super-secret-password" not in row["error_message"]
+        assert "secret-token" not in row["error_detail"]
+    finally:
+        db.close()

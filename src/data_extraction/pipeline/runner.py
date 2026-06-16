@@ -5,6 +5,7 @@ from data_extraction.jobs.base import BaseExtractionJob
 from data_extraction.tracking.errors import ExtractionErrorLogger
 from data_extraction.tracking.runs import ExtractionRunTracker
 from data_extraction.transform.base import BaseTransformJob
+from data_extraction.utils.redaction import sanitize_exception
 
 
 class PipelineRunner:
@@ -51,7 +52,7 @@ class PipelineRunner:
             return run_id
 
         except Exception as exc:
-            error_message = str(exc)
+            error_message = sanitize_exception(exc)
             self.run_tracker.fail_run(run_id, error_message)
             self.error_logger.log_error(
                 run_id=run_id,

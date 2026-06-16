@@ -7,6 +7,7 @@ from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob, JobResult
 from data_extraction.tracking.errors import ExtractionErrorLogger
 from data_extraction.tracking.runs import ExtractionRunTracker
+from data_extraction.utils.redaction import sanitize_exception
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +60,17 @@ class ExtractionRunner:
             return ExtractionRunResult(run_id=run_id, job_results=job_results)
 
         except Exception as exc:
-            error_message = str(exc)
+            error_message = sanitize_exception(exc)
             self.run_tracker.fail_run(run_id, error_message=error_message)
             self.error_logger.log_error(
                 run_id=run_id,
                 error_type=exc.__class__.__name__,
                 error_message=error_message,
             )
-            logger.exception("Failed extraction run: run_id=%s", run_id)
+            logger.error(
+                "Failed extraction run: run_id=%s error_type=%s error_message=%s",
+                run_id,
+                exc.__class__.__name__,
+                error_message,
+            )
             raise

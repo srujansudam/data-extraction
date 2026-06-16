@@ -51,7 +51,9 @@ class FakeOracleConnector:
         self.connected_refs.append(self.secret_ref)
         if self.secret_ref == self.failing_ref:
             raise RuntimeError(
-                "connection failed for secret-db.example with super-secret-password"
+                "ORA-01017: invalid username/password; logon denied "
+                "for ORION_DB_user at secret-db.example:1521/SECRET_SERVICE "
+                "using super-secret-password"
             )
 
     def query_all(self, sql: str) -> list[dict[str, int]]:
@@ -157,8 +159,14 @@ def test_source_failure_does_not_leak_secret_values(
         run_source_test(str(write_config(tmp_path)), "orion")
 
     log_text = capsys.readouterr().err
-    assert "Source connectivity failed: orion" in log_text
+    assert (
+        "Source connectivity failed: orion - RuntimeError: "
+        "ORA-01017: invalid username/password; logon denied"
+    ) in log_text
+    assert "ORION_DB_user" not in log_text
     assert "secret-db.example" not in log_text
     assert "super-secret-password" not in log_text
     assert "SECRET_SERVICE" not in log_text
+    assert ":1521/" not in log_text
+    assert "[REDACTED]" in log_text
     assert FakeOracleConnector.closed_refs == ["ORION_DB"]

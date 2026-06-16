@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from data_extraction.transform.base import BaseTransformJob, TransformResult
+
+logger = logging.getLogger(__name__)
 
 
 class UsersTransformJob(BaseTransformJob):
@@ -63,6 +66,16 @@ class UsersTransformJob(BaseTransformJob):
             association_rows,
         )
         self.db.commit()
+
+        logger.info(
+            "users transform summary | run_id=%s rows_read=%s canonical_rows=%s "
+            "user_customer_account_association_rows=%s merge_behavior=%s",
+            run_id,
+            len(staff_rows),
+            len(insert_rows),
+            len(association_rows),
+            "deterministic_non_null_preference",
+        )
 
         return TransformResult(
             rows_read=len(staff_rows),

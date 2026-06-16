@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from data_extraction.connectors.base import SourceQueryClient
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob, JobResult
 from data_extraction.staging.writer import StagingWriter
+
+logger = logging.getLogger(__name__)
 
 
 class OracleToStagingJob(BaseExtractionJob):
@@ -32,6 +36,17 @@ class OracleToStagingJob(BaseExtractionJob):
         self.requires_window = requires_window
 
     def execute(self, window_start: str | None, window_end: str | None) -> JobResult:
+        logger.info(
+            "Source query started | job_name=%s source_system=%s source_object=%s "
+            "target_table=%s requires_window=%s window_start=%s window_end=%s",
+            self.job_name,
+            self.source_system,
+            self.source_object,
+            self.staging_table,
+            self.requires_window,
+            window_start,
+            window_end,
+        )
         if self.requires_window:
             if window_start is None or window_end is None:
                 raise ValueError(f"{self.job_name} requires window_start and window_end.")
@@ -43,12 +58,25 @@ class OracleToStagingJob(BaseExtractionJob):
         else:
             rows = self.source_client.query_all(self.sql)
 
+        logger.info(
+            "Source query completed | job_name=%s source_system=%s target_table=%s rows_fetched=%s",
+            self.job_name,
+            self.source_system,
+            self.staging_table,
+            len(rows),
+        )
         rows_written = self.staging_writer.write_rows(
             staging_table=self.staging_table,
             run_id=self._current_run_id,
             source_system=self.source_system,
             source_object=self.source_object,
             rows=rows,
+        )
+        logger.info(
+            "Staging write completed | job_name=%s staging_table=%s rows_written=%s",
+            self.job_name,
+            self.staging_table,
+            rows_written,
         )
 
         return JobResult(

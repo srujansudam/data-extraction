@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
@@ -25,7 +26,12 @@ def setup_logging(level: str = "INFO", log_folder: str = "logs") -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
 
-    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+    file_handler = RotatingFileHandler(
+        log_file_path,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=30,
+        encoding="utf-8",
+    )
     file_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
