@@ -28,12 +28,14 @@ class FakePipelineJobBuilder:
         db,
         source_clients: dict[str, SourceQueryClient],
         lotus_excel_file_paths: dict[str, str],
+        hris_dynamics_endpoints=None,
         lotus_corba_connector=None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
         self.source_clients = source_clients
         self.lotus_excel_file_paths = lotus_excel_file_paths
+        self.hris_dynamics_endpoints = hris_dynamics_endpoints
         self.lotus_corba_connector = lotus_corba_connector
         self.timezone = timezone
 

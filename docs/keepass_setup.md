@@ -72,7 +72,7 @@ Recommended entries:
 
 - `ORION_DB_PROD`
 - `FLEXCUBE_DB_PROD`
-- `HRIS_DB_PROD`
+- `HRIS_D365_PROD`
 - `INTERNAL_AUDIT_DB_KEY`
 - `LOTUS_NOTES_PROD` when Lotus CORBA is enabled
 
@@ -80,13 +80,22 @@ The entry title must match the configured `secret_ref`.
 
 Oracle source entries:
 
-- Title: `ORION_DB_PROD`, `FLEXCUBE_DB_PROD`, or `HRIS_DB_PROD`
+- Title: `ORION_DB_PROD` or `FLEXCUBE_DB_PROD`
 - UserName: database username
 - Password: database password
 - Custom fields:
   - `host`
   - `port`
   - `service_name`
+
+HRIS Dynamics 365 entry:
+
+- Title: `HRIS_D365_PROD`
+- Password: Dataverse application client secret
+
+The app accepts this secret as `password`, `client_secret`, `secret`, or `value`.
+Tenant ID, client ID, scope, token URL, health URL, and endpoint mappings remain
+in `config.yaml`; the client secret must not be stored in config.
 
 SQLite SEE database key entry:
 
@@ -168,6 +177,8 @@ After the source entries are validated, test Oracle connectivity:
 ```
 
 The command logs source names only and never logs KeePass credential values.
+For HRIS, `test-source all` performs a Dynamics 365 token request and API health
+check rather than an Oracle query.
 
 ## H. Maintenance And Security
 

@@ -20,10 +20,28 @@ class DatabaseConfig(BaseModel):
     see_activation_key: str | None = None
 
 
+class HrisDynamicsEndpointConfig(BaseModel):
+    url: str
+    target_table: str
+    columns: dict[str, str] = Field(default_factory=dict)
+
+
+class HrisDynamics365Config(BaseModel):
+    tenant_id: str = ""
+    client_id: str = ""
+    object_id: str | None = None
+    secret_ref: str | None = None
+    token_url: str = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    scope: str = ""
+    health_check_url: str | None = None
+    endpoints: dict[str, HrisDynamicsEndpointConfig] = Field(default_factory=dict)
+
+
 class SourceConfig(BaseModel):
     type: str | None = None
     secret_ref: str | None = None
     enabled: bool = True
+    dynamics365: HrisDynamics365Config = Field(default_factory=HrisDynamics365Config)
 
 
 class LotusCorbaExtractConfig(BaseModel):

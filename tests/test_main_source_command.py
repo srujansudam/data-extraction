@@ -64,6 +64,20 @@ class FakeOracleConnector:
         self.closed_refs.append(self.secret_ref)
 
 
+class FakeHrisDynamicsClient:
+    health_checks: int = 0
+
+    def __init__(self, config, secret_provider) -> None:
+        self.config = config
+        self.secret_provider = secret_provider
+
+    def health_check(self) -> None:
+        self.__class__.health_checks += 1
+
+    def close(self) -> None:
+        pass
+
+
 def write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -94,8 +108,53 @@ secrets:
     return config_path
 
 
+def write_dynamics_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+app:
+  name: data-extraction
+database:
+  path: {(tmp_path / "test.db").as_posix()}
+sources:
+  orion:
+    secret_ref: ORION_DB
+  flexcube:
+    secret_ref: FLEXCUBE_DB
+  hris:
+    type: dynamics365
+    enabled: true
+    dynamics365:
+      tenant_id: tenant
+      client_id: client
+      secret_ref: HRIS_D365_PROD
+      token_url: https://login.microsoftonline.com/{{tenant_id}}/oauth2/v2.0/token
+      scope: https://example.crm/.default
+      health_check_url: https://example.crm/api/data/v9.2/staff?$top=1
+      endpoints:
+        hris_staff_identification:
+          url: https://example.crm/api/data/v9.2/staff
+          target_table: stg_hris_staff_identification
+          columns:
+            personnel_number: employee_id
+  lotus_notes:
+    enabled: false
+extraction:
+  timezone: Europe/Malta
+logging:
+  level: INFO
+  folder: {(tmp_path / "logs").as_posix()}
+secrets:
+  provider: environment
+""",
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def prepare_fakes(monkeypatch: pytest.MonkeyPatch) -> None:
     FakeOracleConnector.reset()
+    FakeHrisDynamicsClient.health_checks = 0
     monkeypatch.setattr(
         "data_extraction.main.create_secret_provider",
         lambda settings: FakeSecretProvider(),
@@ -103,6 +162,10 @@ def prepare_fakes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "data_extraction.pipeline.source_health.OracleConnector",
         FakeOracleConnector,
+    )
+    monkeypatch.setattr(
+        "data_extraction.pipeline.source_health.HrisDynamicsClient",
+        FakeHrisDynamicsClient,
     )
 
 
@@ -135,6 +198,20 @@ def test_source_all_tests_all_sources(
     assert FakeOracleConnector.created_refs == ["ORION_DB", "FLEXCUBE_DB", "HRIS_DB"]
     assert FakeOracleConnector.queried_sql == [HEALTH_CHECK_SQL] * 3
     assert FakeOracleConnector.closed_refs == ["ORION_DB", "FLEXCUBE_DB", "HRIS_DB"]
+
+
+def test_source_hris_dynamics_uses_api_not_oracle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prepare_fakes(monkeypatch)
+
+    successful = run_source_test(str(write_dynamics_config(tmp_path)), "hris")
+
+    assert successful == ["hris"]
+    assert FakeHrisDynamicsClient.health_checks == 1
+    assert FakeOracleConnector.created_refs == []
+    assert FakeOracleConnector.queried_sql == []
 
 
 def test_source_unknown_raises_clear_error(

@@ -41,10 +41,23 @@ sources:
   flexcube:
     secret_ref: FLEXCUBE_DB_PROD
   hris:
-    secret_ref: HRIS_DB_PROD
+    type: dynamics365
+    dynamics365:
+      tenant_id: "..."
+      client_id: "..."
+      secret_ref: HRIS_D365_PROD
+      scope: https://operations-bovd365.api.crm4.dynamics.com/.default
+      token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
+      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<table>?$top=1
+      endpoints:
+        hris_staff_identification:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<table>
+          target_table: stg_hris_staff_identification
+          columns:
+            personnel_number: employee_id
 ```
 
-Oracle endpoint details should live in KeePass entries, not in config. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
+Oracle endpoint details for ORION/Flexcube should live in KeePass entries, not in config. HRIS uses Dynamics 365 / Dataverse API endpoints in config and resolves only the client secret from KeePass. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
 
 Lotus mode is selected with:
 
@@ -99,6 +112,8 @@ Oracle entries should use the `secret_ref` as the KeePass entry title. Set UserN
 - `port`
 - `service_name`
 
+The HRIS Dynamics entry should be titled `HRIS_D365_PROD`. Store the Dataverse application client secret as the entry password. The app accepts the secret from `password`, `client_secret`, `secret`, or `value`. Tenant ID, client ID, token URL, scope, health URL, and endpoint mappings remain in config.
+
 The SQLite SEE key entry should be titled `INTERNAL_AUDIT_DB_KEY`. Store the generated key as the entry password or as custom field `key`.
 
 Fallback CLI mode must return JSON:
@@ -141,7 +156,7 @@ Never store real credentials in config.
 ```
 
 `test-secret` logs only returned field names, never secret values.
-`test-source` runs `SELECT 1 AS health_check FROM DUAL` and logs success or failure by source name only.
+`test-source` runs `SELECT 1 AS health_check FROM DUAL` for ORION and Flexcube. For HRIS Dynamics 365 it obtains an OAuth2 client-credentials token and calls the configured health URL, or the first endpoint with `$top=1`.
 `diagnose-runtime` verifies that packaged runtime imports for `cryptography`,
 `cffi`, and `oracledb` succeed. Oracle python-oracledb thin mode requires
 `cryptography` in the executable.
@@ -157,7 +172,7 @@ Check:
 
 For a failed daily run, fix the underlying cause and rerun `run-daily`. Use `run-backfill` when the historical window needs to be rebuilt or a schema/source issue affected multiple days.
 
-If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password.
+If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password. If HRIS Dynamics fails, verify tenant ID, client ID, scope, token URL, endpoint URLs, API permissions/consent, network access to Dataverse, and the `HRIS_D365_PROD` client secret.
 
 If Oracle source testing fails with `python-oracledb thin mode cannot be used
 because the cryptography package cannot be imported`, rebuild the executable

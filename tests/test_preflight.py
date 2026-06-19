@@ -94,6 +94,25 @@ def check_by_name(result: dict[str, object], name: str) -> dict[str, str]:
     raise AssertionError(f"Missing preflight check: {name}")
 
 
+def write_dynamics_config(tmp_path: Path, dynamics_block: str) -> Path:
+    config_path = write_config(tmp_path)
+    content = config_path.read_text(encoding="utf-8")
+    content = content.replace(
+        """  hris:
+    type: oracle
+    secret_ref: HRIS_DB
+    enabled: true
+""",
+        f"""  hris:
+    type: dynamics365
+    enabled: true
+{indent(dynamics_block.strip(), "    ")}
+""",
+    )
+    config_path.write_text(content, encoding="utf-8")
+    return config_path
+
+
 def test_preflight_passes_with_config_example() -> None:
     result = run_preflight("config/config.example.yaml")
 
@@ -131,6 +150,83 @@ def test_preflight_creates_db_and_log_folders_under_tmp_path_config(tmp_path: Pa
     assert (tmp_path / "nested" / "data").is_dir()
     assert (tmp_path / "nested" / "logs").is_dir()
     assert (tmp_path / "nested" / "data" / "audit.db").exists()
+
+
+def test_preflight_passes_with_hris_dynamics_config(tmp_path: Path) -> None:
+    config_path = write_dynamics_config(
+        tmp_path,
+        """
+dynamics365:
+  tenant_id: tenant
+  client_id: client
+  secret_ref: HRIS_D365_PROD
+  token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
+  scope: https://example.crm/.default
+  endpoints:
+    hris_staff_identification:
+      url: https://example.crm/api/data/v9.2/staff
+      target_table: stg_hris_staff_identification
+      columns:
+        personnel_number: employee_id
+""",
+    )
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "passed"
+    hris_check = check_by_name(result, "hris_dynamics365")
+    assert hris_check["status"] == "passed"
+
+
+def test_preflight_fails_when_hris_dynamics_required_fields_missing(tmp_path: Path) -> None:
+    config_path = write_dynamics_config(
+        tmp_path,
+        """
+dynamics365:
+  tenant_id: ""
+  client_id: ""
+  token_url: ""
+  scope: ""
+  endpoints: {}
+""",
+    )
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "failed"
+    hris_check = check_by_name(result, "hris_dynamics365")
+    assert hris_check["status"] == "failed"
+    assert "tenant_id" in hris_check["message"]
+    assert "client_id" in hris_check["message"]
+    assert "token_url" in hris_check["message"]
+    assert "scope" in hris_check["message"]
+    assert "secret_ref" in hris_check["message"]
+    assert "endpoints" in hris_check["message"]
+
+
+def test_preflight_fails_when_hris_dynamics_endpoint_fields_missing(tmp_path: Path) -> None:
+    config_path = write_dynamics_config(
+        tmp_path,
+        """
+dynamics365:
+  tenant_id: tenant
+  client_id: client
+  secret_ref: HRIS_D365_PROD
+  token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
+  scope: https://example.crm/.default
+  endpoints:
+    hris_staff_identification:
+      url: ""
+      target_table: ""
+""",
+    )
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "failed"
+    hris_check = check_by_name(result, "hris_dynamics365")
+    assert "hris_staff_identification.url" in hris_check["message"]
+    assert "hris_staff_identification.target_table" in hris_check["message"]
 
 
 def test_preflight_fails_if_see_database_secret_ref_is_missing(tmp_path: Path) -> None:

@@ -98,7 +98,7 @@ Create KeePass entries with titles matching the configured secret refs:
 
 - `ORION_DB_PROD`
 - `FLEXCUBE_DB_PROD`
-- `HRIS_DB_PROD`
+- `HRIS_D365_PROD`
 - `INTERNAL_AUDIT_DB_KEY`
 - `LOTUS_NOTES_PROD` when CORBA is enabled
 
@@ -123,6 +123,14 @@ The direct provider returns this shape for Oracle source secrets:
 }
 ```
 
+For `HRIS_D365_PROD`:
+
+- Password: Dynamics 365 / Dataverse client secret
+- Config contains the tenant ID and client ID.
+- Do not store the client secret or bearer token in `config.yaml`.
+
+The provider may return the HRIS client secret as `password`, `client_secret`, `secret`, or `value`.
+
 The SQLite SEE database key secret `INTERNAL_AUDIT_DB_KEY` should be stored as the entry Password or custom field `key`, returning:
 
 ```json
@@ -143,7 +151,7 @@ Test each secret reference:
 ```powershell
 .\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD
 .\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD
-.\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD
+.\data-extraction.exe --config .\config\config.yaml test-secret HRIS_D365_PROD
 .\data-extraction.exe --config .\config\config.yaml test-secret INTERNAL_AUDIT_DB_KEY
 .\data-extraction.exe --config .\config\config.yaml test-source all
 ```
@@ -175,7 +183,7 @@ Oracle python-oracledb thin mode requires `cryptography` bundled in the
 executable. If the VM reports that thin mode cannot import `cryptography`,
 rebuild with the current PyInstaller spec and recreate the release bundle.
 
-`test-source all` must report successful connectivity for ORION, Flexcube, and HRIS before the first extraction.
+`test-source all` must report successful connectivity for ORION, Flexcube, and HRIS before the first extraction. ORION and Flexcube use Oracle connectivity checks. HRIS uses OAuth2 client credentials and the configured Dynamics 365 / Dataverse health URL or first endpoint with `$top=1`.
 
 If enabling CORBA, also run:
 
@@ -274,7 +282,8 @@ Check:
 
 Common issues:
 
-- Oracle connection failure
+- Oracle connection failure for ORION/Flexcube
+- HRIS Dynamics token or endpoint failure
 - KeePass database or key file is missing/inaccessible
 - KeePass entry fields are incomplete
 - Lotus Notes Excel file missing

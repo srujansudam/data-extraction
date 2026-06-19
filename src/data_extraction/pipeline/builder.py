@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from data_extraction.config.settings import HrisDynamicsEndpointConfig
 from data_extraction.connectors.base import SourceQueryClient
+from data_extraction.connectors.hris_dynamics import HrisDynamicsClient
 from data_extraction.connectors.lotus_corba import LotusCorbaConnector
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob
@@ -15,6 +17,7 @@ from data_extraction.jobs.staging.factory import (
     create_lotus_excel_staging_job,
     create_orion_staging_job,
 )
+from data_extraction.jobs.staging.hris_dynamics import HrisDynamicsEndpointStagingJob
 from data_extraction.jobs.staging.lotus_corba import (
     LOTUS_CORBA_JOB_DATASETS,
     LotusCorbaStagingJob,
@@ -35,12 +38,14 @@ class PipelineJobBuilder:
         db: DatabaseAdapter,
         source_clients: dict[str, SourceQueryClient],
         lotus_excel_file_paths: dict[str, str],
+        hris_dynamics_endpoints: dict[str, HrisDynamicsEndpointConfig] | None = None,
         lotus_corba_connector: LotusCorbaConnector | None = None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
         self.source_clients = source_clients
         self.lotus_excel_file_paths = lotus_excel_file_paths
+        self.hris_dynamics_endpoints = hris_dynamics_endpoints or {}
         self.lotus_corba_connector = lotus_corba_connector
         self.timezone = timezone
         self.staging_writer = StagingWriter(db)
@@ -101,6 +106,15 @@ class PipelineJobBuilder:
             )
 
         if job_name in HRIS_STAGING_JOB_CLASSES:
+            if self.hris_dynamics_endpoints:
+                return HrisDynamicsEndpointStagingJob(
+                    db=self.db,
+                    source_client=self._hris_dynamics_client(job_name),
+                    staging_writer=self.staging_writer,
+                    endpoint_name=job_name,
+                    endpoint_config=self._hris_dynamics_endpoint(job_name),
+                    timezone=self.timezone,
+                )
             return create_hris_staging_job(
                 job_name=job_name,
                 db=self.db,
@@ -147,6 +161,25 @@ class PipelineJobBuilder:
             raise ValueError(
                 f"Missing source client for '{source_system}' required by staging job "
                 f"'{job_name}'. Available source clients: {available_clients}"
+            ) from exc
+
+    def _hris_dynamics_client(self, job_name: str) -> HrisDynamicsClient:
+        source_client = self._source_client("hris", job_name)
+        if not isinstance(source_client, HrisDynamicsClient):
+            raise ValueError(
+                f"HRIS staging job '{job_name}' requires an HRIS Dynamics client when "
+                "HRIS Dynamics endpoints are configured."
+            )
+        return source_client
+
+    def _hris_dynamics_endpoint(self, job_name: str) -> HrisDynamicsEndpointConfig:
+        try:
+            return self.hris_dynamics_endpoints[job_name]
+        except KeyError as exc:
+            available_endpoints = ", ".join(sorted(self.hris_dynamics_endpoints)) or "none"
+            raise ValueError(
+                f"Missing HRIS Dynamics endpoint config for staging job '{job_name}'. "
+                f"Available HRIS Dynamics endpoints: {available_endpoints}"
             ) from exc
 
     def _lotus_file_path(self, job_name: str) -> str:

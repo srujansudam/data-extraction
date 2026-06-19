@@ -53,6 +53,7 @@ def run_preflight(config_path: str = "config/config.example.yaml") -> dict[str, 
     _check_secret_provider_config(checks, settings, is_template_config)
     _check_database(checks, settings, is_template_config)
     _check_required_secret_refs(checks, settings)
+    _check_hris_dynamics_config(checks, settings)
     _check_lotus_excel_config(checks, settings)
 
     return {
@@ -159,6 +160,8 @@ def _check_database_encryption_config(checks: list[dict[str, str]], settings: Se
 def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings) -> None:
     for display_name, config_attr in REQUIRED_SOURCE_SECRET_REFS.items():
         source_config = getattr(settings.sources, config_attr)
+        if config_attr == "hris" and (source_config.type or "oracle").lower() == "dynamics365":
+            continue
         if not source_config.secret_ref:
             _add_failure(
                 checks,
@@ -172,6 +175,46 @@ def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings
             f"{config_attr}_secret_ref",
             f"{display_name} secret_ref is configured.",
         )
+
+
+def _check_hris_dynamics_config(checks: list[dict[str, str]], settings: Settings) -> None:
+    hris_config = settings.sources.hris
+    if (hris_config.type or "oracle").lower() != "dynamics365":
+        _add_pass(checks, "hris_source_type", "HRIS source is not Dynamics 365.")
+        return
+
+    dynamics = hris_config.dynamics365
+    missing = []
+    if not dynamics.tenant_id.strip():
+        missing.append("tenant_id")
+    if not dynamics.client_id.strip():
+        missing.append("client_id")
+    if not dynamics.token_url.strip():
+        missing.append("token_url")
+    if not dynamics.scope.strip():
+        missing.append("scope")
+    if not dynamics.secret_ref:
+        missing.append("secret_ref")
+    if not dynamics.endpoints:
+        missing.append("endpoints")
+
+    endpoint_errors = []
+    for endpoint_name, endpoint_config in dynamics.endpoints.items():
+        if not endpoint_config.url.strip():
+            endpoint_errors.append(f"{endpoint_name}.url")
+        if not endpoint_config.target_table.strip():
+            endpoint_errors.append(f"{endpoint_name}.target_table")
+
+    if missing or endpoint_errors:
+        messages = []
+        if missing:
+            messages.append(f"missing: {', '.join(missing)}")
+        if endpoint_errors:
+            messages.append(f"endpoint fields: {', '.join(endpoint_errors)}")
+        _add_failure(checks, "hris_dynamics365", "; ".join(messages))
+        return
+
+    _add_pass(checks, "hris_dynamics365", "HRIS Dynamics 365 config is valid.")
 
 
 def _check_secret_provider_config(

@@ -4,8 +4,8 @@
 
 The production data extraction service is a packaged Windows executable that:
 
-- reads Oracle source credentials from a local KeePass/KeePassXC vault using PyKeePass
-- connects to ORION, Flexcube, and HRIS
+- reads source credentials from a local KeePass/KeePassXC vault using PyKeePass
+- connects to ORION and Flexcube through Oracle, and HRIS through Dynamics 365 / Dataverse APIs
 - ingests Lotus Notes data from configured Excel extracts by default
 - optionally extracts dedicated Lotus views through the Java 8 CORBA reader
 - loads direct and staged/transform data into a local SQLite database
@@ -56,7 +56,7 @@ accounts, customer relationships, or user account assignments are required.
 
 - ORION: Oracle
 - Flexcube: Oracle
-- HRIS: Oracle views
+- HRIS: Dynamics 365 / Dataverse API using OAuth2 client credentials
 - Lotus Notes: Excel ingestion by default, optional Java 8 CORBA Phase 2
 
 ## Credentials
@@ -114,7 +114,7 @@ Update only deployment-specific settings:
 
 - database and logging paths, if different
 - KeePass database/key-file paths
-- ORION, Flexcube, and HRIS secret references
+- ORION, Flexcube, and HRIS Dynamics secret references
 - Lotus Excel file paths
 - optional Lotus CORBA paths and mappings
 - SEE activation key only if required by the licensed SEE build
@@ -127,7 +127,7 @@ Create:
 
 - `ORION_DB_PROD`
 - `FLEXCUBE_DB_PROD`
-- `HRIS_DB_PROD`
+- `HRIS_D365_PROD`
 - `INTERNAL_AUDIT_DB_KEY`
 - `LOTUS_NOTES_PROD` when CORBA is enabled
 
@@ -136,6 +136,12 @@ Oracle entries:
 - UserName: database username
 - Password: database password
 - Custom fields: `host`, `port`, `service_name`
+
+HRIS Dynamics entry:
+
+- Password: Dataverse application client secret
+- The app reads it from `password`, `client_secret`, `secret`, or `value`
+- Tenant ID, client ID, scope, token URL, health URL, and endpoint mappings stay in config
 
 SQLite SEE key entry:
 
@@ -176,6 +182,7 @@ See `docs\sqlite_see_setup.md`.
 ```powershell
 .\data-extraction.exe --config .\config\config.yaml preflight
 .\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD
+.\data-extraction.exe --config .\config\config.yaml test-secret HRIS_D365_PROD
 .\data-extraction.exe --config .\config\config.yaml test-source all
 .\data-extraction.exe --config .\config\config.yaml init-db
 .\data-extraction.exe --config .\config\config.yaml run-dry-pipeline --reset-db

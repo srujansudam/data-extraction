@@ -69,7 +69,7 @@ Internal Audit Data Extraction Release Bundle
 Next steps on client VM:
 1. Copy config\config.production.template.yaml to config\config.yaml.
 2. Keep secrets.provider: keepass for production.
-3. Create/populate the KeePass database entries for ORION_DB_PROD, FLEXCUBE_DB_PROD, HRIS_DB_PROD, and INTERNAL_AUDIT_DB_KEY.
+3. Create/populate the KeePass database entries for ORION_DB_PROD, FLEXCUBE_DB_PROD, HRIS_D365_PROD, and INTERNAL_AUDIT_DB_KEY.
 4. Place the client-created .kdbx and .keyx files under secrets\ or update config.yaml to their approved paths.
 5. Keep database.encryption: see for production.
 6. Configure INTERNAL_AUDIT_DB_KEY in KeePass. It can be stored as the entry password or as custom field key.
@@ -86,9 +86,9 @@ Next steps on client VM:
 12. Test secrets:
    .\data-extraction.exe --config .\config\config.yaml test-secret ORION_DB_PROD 
    .\data-extraction.exe --config .\config\config.yaml test-secret FLEXCUBE_DB_PROD 
-   .\data-extraction.exe --config .\config\config.yaml test-secret HRIS_DB_PROD 
+   .\data-extraction.exe --config .\config\config.yaml test-secret HRIS_D365_PROD 
    .\data-extraction.exe --config .\config\config.yaml test-secret INTERNAL_AUDIT_DB_KEY
-13. Test all Oracle source connections:
+13. Test all source connections. ORION/Flexcube use Oracle checks; HRIS uses Dynamics 365 / Dataverse API health checks:
    .\data-extraction.exe --config .\config\config.yaml test-source all
 14. Run initial backfill:
    .\data-extraction.exe --config .\config\config.yaml run-backfill

@@ -6,7 +6,10 @@ from typing import Any
 
 import pytest
 
+from data_extraction.config.settings import HrisDynamics365Config, HrisDynamicsEndpointConfig
+from data_extraction.connectors.hris_dynamics import HrisDynamicsClient
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
+from data_extraction.jobs.staging.hris_dynamics import HrisDynamicsEndpointStagingJob
 from data_extraction.jobs.staging.lotus_corba import LotusCorbaStagingJob
 from data_extraction.pipeline.builder import PipelineJobBuilder
 from data_extraction.pipeline.definitions import (
@@ -23,6 +26,11 @@ class FakeSourceClient:
         params: Iterable[Any] | None = None,
     ) -> list[dict[str, Any]]:
         return []
+
+
+class FakeSecretProvider:
+    def get_secret(self, secret_ref: str) -> dict[str, str]:
+        return {"password": "secret"}
 
 
 def lotus_file_paths() -> dict[str, str]:
@@ -129,6 +137,41 @@ def test_corba_connector_builds_corba_staging_jobs_without_excel_paths(
     assert len(jobs) == 1
     assert isinstance(jobs[0], LotusCorbaStagingJob)
     assert jobs[0].dataset == "bov_employees"
+
+
+def test_hris_dynamics_endpoint_config_builds_dynamics_staging_job(tmp_path: Path) -> None:
+    endpoint_config = HrisDynamicsEndpointConfig(
+        url="https://example.crm/api/data/v9.2/staff",
+        target_table="stg_hris_staff_identification",
+        columns={"personnel_number": "employee_id"},
+    )
+    hris_client = HrisDynamicsClient(
+        HrisDynamics365Config(
+            tenant_id="tenant",
+            client_id="client",
+            secret_ref="HRIS_D365_PROD",
+            token_url="https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+            scope="https://example.crm/.default",
+            endpoints={"hris_staff_identification": endpoint_config},
+        ),
+        FakeSecretProvider(),
+    )
+    builder = PipelineJobBuilder(
+        db=SQLiteAdapter(str(tmp_path / "test.db")),
+        source_clients={
+            "orion": FakeSourceClient(),
+            "flexcube": FakeSourceClient(),
+            "hris": hris_client,
+        },
+        lotus_excel_file_paths=lotus_file_paths(),
+        hris_dynamics_endpoints={"hris_staff_identification": endpoint_config},
+    )
+
+    jobs = builder.build_staging_jobs(["hris_staff_identification"])
+
+    assert len(jobs) == 1
+    assert isinstance(jobs[0], HrisDynamicsEndpointStagingJob)
+    assert jobs[0].target_table == "stg_hris_staff_identification"
 
 
 def _staging_definition_name(job_name: str) -> str:

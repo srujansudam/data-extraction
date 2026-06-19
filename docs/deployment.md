@@ -41,6 +41,7 @@ The client VM should not need Python libraries installed separately.
 
 - SQLite SEE is the production encryption option. SEE binaries and license material are not included in this repository.
 - Production secrets use a local KeePass/KeePassXC `.kdbx` database selected by `secrets.provider: keepass`.
+- HRIS is configured as a Dynamics 365 / Dataverse API source in production. The client secret is resolved from `HRIS_D365_PROD`; tenant ID, client ID, scope, token URL, health check URL, and endpoint mappings are configured in `config.yaml`.
 - Lotus Notes defaults to Excel ingestion. Java 8 CORBA is a supported optional Phase 2 mode.
 
 For production encryption setup, follow [sqlite_see_setup.md](sqlite_see_setup.md).
@@ -52,6 +53,7 @@ For KeePass setup, follow [keepass_setup.md](keepass_setup.md).
 .\data-extraction.exe preflight
 .\data-extraction.exe diagnose-runtime
 .\data-extraction.exe test-secret ORION_DB_PROD
+.\data-extraction.exe test-secret HRIS_D365_PROD
 .\data-extraction.exe test-source all
 .\data-extraction.exe test-lotus-corba
 .\data-extraction.exe init-db
@@ -71,3 +73,5 @@ For CORBA, do not commit or bundle the real Domino jars or IOR file. BOV/client 
 Do not store real credentials in config files. Production config should contain secret references only. The direct KeePass provider resolves those references from the local `.kdbx` at runtime.
 
 For encrypted production databases, `database.secret_ref` should point to `INTERNAL_AUDIT_DB_KEY`, and that secret should return JSON such as `{"key": "long-random-passphrase"}`.
+
+For HRIS Dynamics 365, `sources.hris.dynamics365.secret_ref` should point to `HRIS_D365_PROD`, and that KeePass entry should store the Dataverse application client secret as the entry password or a supported field (`client_secret`, `secret`, or `value`). Bearer tokens and client secrets must never be logged or stored in config.

@@ -61,6 +61,7 @@ def run_configured_pipeline(
             db=db,
             source_clients=source_clients,
             lotus_excel_file_paths=lotus_excel_file_paths,
+            hris_dynamics_endpoints=_hris_dynamics_endpoints(settings),
             lotus_corba_connector=lotus_corba_connector,
             timezone=settings.extraction.timezone,
         )
@@ -128,3 +129,9 @@ def _database_key_for_settings(settings: Settings, secret_provider) -> str | Non
         return None
 
     return get_database_key(secret_provider, settings.database.secret_ref)
+
+
+def _hris_dynamics_endpoints(settings: Settings):
+    if (settings.sources.hris.type or "oracle").lower() != "dynamics365":
+        return None
+    return dict(settings.sources.hris.dynamics365.endpoints)

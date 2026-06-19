@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from data_extraction.config.settings import Settings
+from data_extraction.connectors.hris_dynamics import HrisDynamicsClient
 from data_extraction.connectors.oracle import OracleConnector
 from data_extraction.secrets.base import SecretProvider
 from data_extraction.utils.redaction import sanitize_exception, secret_values_from_mappings
@@ -23,7 +24,7 @@ def check_source_connections(
     failed_sources: list[str] = []
 
     for current_source in source_names:
-        connector: OracleConnector | None = None
+        connector = None
         failure: Exception | None = None
         observed_secrets: list[dict[str, str]] = []
         recording_secret_provider = _RecordingSecretProvider(
@@ -34,15 +35,23 @@ def check_source_connections(
             source_config = getattr(settings.sources, current_source)
             if not source_config.enabled:
                 raise ValueError(f"Source '{current_source}' is disabled.")
-            if not source_config.secret_ref:
-                raise ValueError(f"Source '{current_source}' is missing secret_ref.")
+            if current_source == "hris" and (source_config.type or "oracle").lower() == "dynamics365":
+                dynamics_client = HrisDynamicsClient(
+                    config=source_config.dynamics365,
+                    secret_provider=recording_secret_provider,
+                )
+                dynamics_client.health_check()
+                connector = dynamics_client
+            else:
+                if not source_config.secret_ref:
+                    raise ValueError(f"Source '{current_source}' is missing secret_ref.")
 
-            connector = OracleConnector.from_secret_ref(
-                secret_provider=recording_secret_provider,
-                secret_ref=source_config.secret_ref,
-            )
-            connector.connect()
-            connector.query_all(HEALTH_CHECK_SQL)
+                connector = OracleConnector.from_secret_ref(
+                    secret_provider=recording_secret_provider,
+                    secret_ref=source_config.secret_ref,
+                )
+                connector.connect()
+                connector.query_all(HEALTH_CHECK_SQL)
         except Exception as exc:
             failure = exc
         finally:
@@ -85,6 +94,7 @@ class _RecordingSecretProvider:
         secret = self.secret_provider.get_secret(secret_ref)
         self.observed_secrets.append(secret)
         return secret
+
 
 def _resolve_source_names(source_name: str) -> tuple[str, ...]:
     normalized_name = source_name.lower()

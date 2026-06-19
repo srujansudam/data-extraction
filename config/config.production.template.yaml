@@ -53,13 +53,69 @@ sources:
     secret_ref: FLEXCUBE_DB_PROD
 
   hris:
-    type: oracle
+    type: dynamics365
     enabled: true
 
     # KeePass entry title.
-    # Secret must return:
-    # username, password, host, port, service_name
-    secret_ref: HRIS_DB_PROD
+    # Secret must return the Dynamics client secret in password/client_secret/secret/value.
+    dynamics365:
+      tenant_id: TO_BE_PROVIDED
+      client_id: TO_BE_PROVIDED
+      object_id: OPTIONAL_REFERENCE_ONLY
+      secret_ref: HRIS_D365_PROD
+      token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
+      scope: https://operations-bovd365.api.crm4.dynamics.com/.default
+      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<one_table_name>?$top=1
+      endpoints:
+        hris_staff_identification:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<staff_identification_table>
+          target_table: stg_hris_staff_identification
+          columns:
+            personnel_number: Personnel Number
+            name: Name
+            identification_number: Identification Number
+            department: Department
+            primary_position_description: Primary Position Description
+            primary_position_category: Primary Position Category
+        hris_personnel_contact_detail:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<personnel_contact_detail_table>
+          target_table: stg_hris_personnel_contact_detail
+          columns:
+            personnel_number: Personnel Number
+            national_id: National ID
+            first_name: First Name
+            last_name: Last Name
+            department_name: Department Name
+            relationship_type: Relationship Type
+            rel_first_name: Rel First Name
+            rel_last_name: Rel Last Name
+            rel_national_id: Rel National ID
+            rel_gender: Rel Gender
+        hris_appendix_3_crm:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<appendix_3_crm_table>
+          target_table: stg_hris_appendix_3_crm
+          columns:
+            personnel_number: PersonnelNumber
+            bovnt_custom: BOVNT_Custom
+            identity_email: IdentityEmail
+            id_number: ID Number
+            full_name: Full Name
+            exco_member: EXCO Member
+            department_name: Department Name
+            section_name: Section Name
+            sub_section: Sub-section
+            branch_posted: Branch Posted
+            main_department: Main Department
+            main_section: Main Section
+            main_sub_section: Main Sub-section
+            primary_position: Primary Position
+            primary_position_description: Primary Position Description
+            primary_position_category: Primary Position Category
+            manager_name: Manager Name
+            manager_position: Manager Position
+            manager_email: Manager Email
+            last_name: LastName
+            first_name: FirstName
 
   lotus_notes:
     enabled: true
