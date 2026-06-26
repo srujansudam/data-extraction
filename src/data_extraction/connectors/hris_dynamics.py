@@ -166,9 +166,9 @@ class HrisDynamicsClient:
                 return endpoint_name
 
         object_aliases = {
-            "Staff Identification": "hris_staff_identification",
-            "Personnel Contact Detail": "hris_personnel_contact_detail",
-            "Appendix 3 (CRM)": "hris_appendix_3_crm",
+            "Staff Identification": "hris_consolidated",
+            "Personnel Contact Detail": "hris_consolidated",
+            "Appendix 3 (CRM)": "hris_consolidated",
         }
         for object_name, endpoint_name in object_aliases.items():
             if object_name in query:

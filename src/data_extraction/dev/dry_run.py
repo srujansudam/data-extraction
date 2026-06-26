@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from data_extraction.config.settings import load_settings
+from data_extraction.config.settings import HrisDynamicsEndpointConfig, load_settings
 from data_extraction.db.key_provider import get_database_key
 from data_extraction.db.schema import create_all_tables
 from data_extraction.db.sqlite_adapter import SQLiteAdapter
@@ -75,6 +75,16 @@ def run_dry_pipeline(
             db=db,
             source_clients=source_clients,
             lotus_excel_file_paths=lotus_file_paths,
+            hris_dynamics_endpoints={
+                "hris_consolidated": HrisDynamicsEndpointConfig(
+                    url="https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees",
+                    target_table="stg_hris_consolidated",
+                    columns={
+                        "worker_personnel_number": "crfe9_workerpersonnelnumber",
+                        "full_name": "crfe9_name",
+                    },
+                )
+            },
             timezone=settings.extraction.timezone,
         )
         direct_jobs, staging_jobs, transform_jobs = builder.build_full_pipeline()

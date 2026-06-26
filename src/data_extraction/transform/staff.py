@@ -27,10 +27,18 @@ class StaffTransformJob(BaseTransformJob):
         window_start: str | None,
         window_end: str | None,
     ) -> TransformResult:
-        staff_identification = self.staging_reader.read_payloads(
-            "stg_hris_staff_identification", run_id=run_id
+        hris_consolidated = self.staging_reader.read_payloads(
+            "stg_hris_consolidated", run_id=run_id
         )
-        appendix_rows = self.staging_reader.read_payloads("stg_hris_appendix_3_crm", run_id=run_id)
+        staff_identification = hris_consolidated
+        appendix_rows: list[dict[str, Any]] = []
+        if not hris_consolidated:
+            staff_identification = self.staging_reader.read_payloads(
+                "stg_hris_staff_identification", run_id=run_id
+            )
+            appendix_rows = self.staging_reader.read_payloads(
+                "stg_hris_appendix_3_crm", run_id=run_id
+            )
         lotus_rows = self.staging_reader.read_payloads("stg_lotus_bov_employees", run_id=run_id)
         flexcube_users = self.staging_reader.read_payloads("stg_flexcube_user_details", run_id=run_id)
         identity_rows = self.staging_reader.read_payloads(
@@ -140,7 +148,7 @@ def _build_staff_rows(
         lotus_row = lotus_by_staff_no.get(personnel_number, {})
 
         id_card_number = _first_value(
-            _get(staff_row, ["Identification Number", "identification_number"]),
+                    _get(staff_row, ["Identification Number", "identification_number"]),
             _get(appendix_row, ["ID Number", "id_number"]),
             _get(lotus_row, ["Flexcube No", "flexcube_no"]),
         )
@@ -148,6 +156,7 @@ def _build_staff_rows(
         user_code = _first_value(
             _get(flexcube_user, ["user_code"]),
             _get(lotus_row, ["Flexcube No", "flexcube_no"]),
+            _get(staff_row, ["nt_username"]),
             _get(appendix_row, ["BOVNT_Custom", "bovnt_custom"]),
         )
         customer_code = customer_by_identity.get(_normalized(id_card_number))
@@ -163,10 +172,17 @@ def _build_staff_rows(
                     personnel_number,
                     _first_value(
                         _get(staff_row, ["Name", "name"]),
+                        _get(staff_row, ["full_name"]),
                         _get(appendix_row, ["Full Name", "full_name"]),
                     ),
-                    _get(appendix_row, ["FirstName", "first_name"]),
-                    _get(appendix_row, ["LastName", "last_name"]),
+                    _first_value(
+                        _get(staff_row, ["first_name"]),
+                        _get(appendix_row, ["FirstName", "first_name"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["last_name"]),
+                        _get(appendix_row, ["LastName", "last_name"]),
+                    ),
                     id_card_number,
                     id_card_number,
                     user_code,
@@ -174,34 +190,61 @@ def _build_staff_rows(
                     _get(lotus_row, ["OBPM No", "obpm_no"]),
                     _first_value(
                         _get(flexcube_user, ["nt_username"]),
+                        _get(staff_row, ["nt_username"]),
                         _get(appendix_row, ["BOVNT_Custom", "bovnt_custom"]),
                     ),
-                    _get(appendix_row, ["IdentityEmail", "identity_email"]),
+                    _first_value(
+                        _get(staff_row, ["email"]),
+                        _get(appendix_row, ["IdentityEmail", "identity_email"]),
+                    ),
                     customer_code,
                     account_number,
                     _get(staff_row, ["Department", "department"]),
-                    _get(appendix_row, ["Department Name", "department_name"]),
-                    _get(appendix_row, ["Section Name", "section_name"]),
-                    _get(appendix_row, ["Sub-section", "sub_section"]),
+                    _first_value(
+                        _get(staff_row, ["department"]),
+                        _get(appendix_row, ["Department Name", "department_name"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["section"]),
+                        _get(appendix_row, ["Section Name", "section_name"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["subsection", "sub_section"]),
+                        _get(appendix_row, ["Sub-section", "sub_section"]),
+                    ),
                     _get(appendix_row, ["Branch Posted", "branch_posted"]),
                     _get(appendix_row, ["Main Department", "main_department"]),
                     _get(appendix_row, ["Main Section", "main_section"]),
                     _get(appendix_row, ["Main Sub-section", "main_sub_section"]),
-                    _get(appendix_row, ["Primary Position", "primary_position"]),
                     _first_value(
+                        _get(staff_row, ["position_id"]),
+                        _get(appendix_row, ["Primary Position", "primary_position"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["position_description"]),
                         _get(appendix_row, ["Primary Position Description", "primary_position_description"]),
                         _get(staff_row, ["Primary Position Description", "primary_position_description"]),
                     ),
                     _first_value(
+                        _get(staff_row, ["position_type"]),
                         _get(appendix_row, ["Primary Position Category", "primary_position_category"]),
                         _get(staff_row, ["Primary Position Category", "primary_position_category"]),
                     ),
-                    _get(appendix_row, ["Manager Name", "manager_name"]),
-                    _get(appendix_row, ["Manager Position", "manager_position"]),
-                    _get(appendix_row, ["Manager Email", "manager_email"]),
+                    _first_value(
+                        _get(staff_row, ["manager_name"]),
+                        _get(appendix_row, ["Manager Name", "manager_name"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["parent_position_description"]),
+                        _get(appendix_row, ["Manager Position", "manager_position"]),
+                    ),
+                    _first_value(
+                        _get(staff_row, ["manager_email"]),
+                        _get(appendix_row, ["Manager Email", "manager_email"]),
+                    ),
                     _get(lotus_row, ["Location", "location"]),
-                    None,
-                    None,
+                    _get(staff_row, ["employment_end_date"]),
+                    _get(staff_row, ["worker_status"]),
                 ]
             )
 
@@ -220,7 +263,16 @@ def _accounts_by_customer(account_rows: list[dict[str, Any]]) -> dict[Any, list[
 
 
 def _personnel_number(row: dict[str, Any]) -> Any:
-    return _get(row, ["Personnel Number", "personnel_number", "PersonnelNumber", "personnelnumber"])
+    return _get(
+        row,
+        [
+            "Personnel Number",
+            "personnel_number",
+            "PersonnelNumber",
+            "personnelnumber",
+            "worker_personnel_number",
+        ],
+    )
 
 
 def _staff_no(row: dict[str, Any]) -> Any:

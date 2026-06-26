@@ -26,12 +26,12 @@ def create_config() -> HrisDynamics365Config:
         token_url="https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
         scope="https://operations-bovd365.api.crm4.dynamics.com/.default",
         endpoints={
-            "hris_staff_identification": HrisDynamicsEndpointConfig(
-                url="https://example.crm/api/data/v9.2/staff",
-                target_table="stg_hris_staff_identification",
+            "hris_consolidated": HrisDynamicsEndpointConfig(
+                url="https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees",
+                target_table="stg_hris_consolidated",
                 columns={
-                    "personnel_number": "employee_id",
-                    "name": "employee_name",
+                    "worker_personnel_number": "crfe9_workerpersonnelnumber",
+                    "full_name": "crfe9_name",
                 },
             )
         },
@@ -70,6 +70,27 @@ def test_client_secret_is_read_from_secret_provider(monkeypatch: pytest.MonkeyPa
     assert secret_provider.secret_refs == ["HRIS_D365_PROD"]
 
 
+def test_health_check_uses_configured_health_check_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = create_config()
+    config.health_check_url = (
+        "https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/"
+        "crfe9_hrisemployees?$top=1"
+    )
+    client = HrisDynamicsClient(config, FakeSecretProvider())
+    monkeypatch.setattr(client, "_post_json", lambda *args: {"access_token": "token"})
+    observed: list[tuple[str, str]] = []
+
+    def fake_get_json(url: str, token: str) -> dict[str, Any]:
+        observed.append((url, token))
+        return {"value": []}
+
+    monkeypatch.setattr(client, "_get_json", fake_get_json)
+
+    client.health_check()
+
+    assert observed == [(config.health_check_url, "token")]
+
+
 def test_endpoint_get_uses_bearer_token_and_maps_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     client = HrisDynamicsClient(create_config(), FakeSecretProvider())
     monkeypatch.setattr(client, "_post_json", lambda *args: {"access_token": "access-token-value"})
@@ -82,19 +103,19 @@ def test_endpoint_get_uses_bearer_token_and_maps_rows(monkeypatch: pytest.Monkey
     ) -> dict[str, Any]:
         observed_headers.append(headers)
         assert data is None
-        assert url == "https://example.crm/api/data/v9.2/staff"
-        return {"value": [{"employee_id": "P001", "employee_name": "Alice"}]}
+        assert url == "https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees"
+        return {"value": [{"crfe9_workerpersonnelnumber": "P001", "crfe9_name": "Alice"}]}
 
     monkeypatch.setattr(client, "_request_json", fake_request_json)
 
-    rows = client.fetch_endpoint("hris_staff_identification")
+    rows = client.fetch_endpoint("hris_consolidated")
 
     assert observed_headers[0]["Authorization"] == "Bearer access-token-value"
     assert rows == [
         {
-            "personnel_number": "P001",
-            "name": "Alice",
-            "_raw_record": {"employee_id": "P001", "employee_name": "Alice"},
+            "worker_personnel_number": "P001",
+            "full_name": "Alice",
+            "_raw_record": {"crfe9_workerpersonnelnumber": "P001", "crfe9_name": "Alice"},
         }
     ]
 
@@ -108,20 +129,20 @@ def test_odata_nextlink_pagination(monkeypatch: pytest.MonkeyPatch) -> None:
         urls.append(url)
         if len(urls) == 1:
             return {
-                "value": [{"employee_id": "P001"}],
-                "@odata.nextLink": "https://example.crm/api/data/v9.2/staff?$skiptoken=2",
+                "value": [{"crfe9_workerpersonnelnumber": "P001"}],
+                "@odata.nextLink": "https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees?$skiptoken=5000",
             }
-        return {"value": [{"employee_id": "P002"}]}
+        return {"value": [{"crfe9_workerpersonnelnumber": "P002"}]}
 
     monkeypatch.setattr(client, "_get_json", fake_get_json)
 
-    rows = client.fetch_endpoint("hris_staff_identification")
+    rows = client.fetch_endpoint("hris_consolidated")
 
     assert urls == [
-        "https://example.crm/api/data/v9.2/staff",
-        "https://example.crm/api/data/v9.2/staff?$skiptoken=2",
+        "https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees",
+        "https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees?$skiptoken=5000",
     ]
-    assert [row["personnel_number"] for row in rows] == ["P001", "P002"]
+    assert [row["worker_personnel_number"] for row in rows] == ["P001", "P002"]
 
 
 def test_token_and_secret_are_redacted_from_errors(monkeypatch: pytest.MonkeyPatch) -> None:

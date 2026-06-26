@@ -41,11 +41,11 @@ def test_hris_dynamics_endpoint_job_writes_configured_staging_table(tmp_path: Pa
             db=db,
             source_client=source_client,  # type: ignore[arg-type]
             staging_writer=StagingWriter(db),
-            endpoint_name="hris_staff_identification",
+            endpoint_name="hris_consolidated",
             endpoint_config=HrisDynamicsEndpointConfig(
-                url="https://example.crm/api/data/v9.2/staff",
-                target_table="stg_hris_staff_identification",
-                columns={"personnel_number": "employee_id"},
+                url="https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees",
+                target_table="stg_hris_consolidated",
+                columns={"worker_personnel_number": "crfe9_workerpersonnelnumber"},
             ),
         )
 
@@ -53,14 +53,14 @@ def test_hris_dynamics_endpoint_job_writes_configured_staging_table(tmp_path: Pa
 
         rows = db.query_all(
             "SELECT source_system, source_object, source_payload "
-            "FROM stg_hris_staff_identification"
+            "FROM stg_hris_consolidated"
         )
 
-        assert source_client.endpoint_names == ["hris_staff_identification"]
+        assert source_client.endpoint_names == ["hris_consolidated"]
         assert result.rows_extracted == 1
         assert result.rows_inserted == 1
         assert rows[0]["source_system"] == "hris"
-        assert rows[0]["source_object"] == "hris_staff_identification"
+        assert rows[0]["source_object"] == "hris_consolidated"
         assert json.loads(rows[0]["source_payload"]) == {
             "personnel_number": "P001",
             "_raw_record": {"employee_id": "P001"},

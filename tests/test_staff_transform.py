@@ -22,55 +22,35 @@ def create_test_run(db: SQLiteAdapter) -> int:
 def stage_staff_inputs(db: SQLiteAdapter, run_id: int) -> None:
     writer = StagingWriter(db)
     writer.write_rows(
-        "stg_hris_staff_identification",
+        "stg_hris_consolidated",
         run_id,
         "hris",
-        "Staff Identification",
+        "hris_consolidated",
         [
             {
-                "Personnel Number": "P001",
-                "Name": "Alice Staff",
-                "Identification Number": "ID001",
-                "Department": "Audit",
-                "Primary Position Description": "Auditor",
-                "Primary Position Category": "Professional",
+                "worker_personnel_number": "P001",
+                "full_name": "Alice Staff",
+                "first_name": "Alice",
+                "last_name": "Staff",
+                "identification_number": "ID001",
+                "department": "Internal Audit",
+                "section": "Reviews",
+                "subsection": "Banking",
+                "position_id": "AUD",
+                "position_description": "Senior Auditor",
+                "position_type": "Professional",
+                "manager_name": "Manager One",
+                "parent_position_description": "Head",
+                "manager_email": "manager@example.test",
+                "email": "alice@example.test",
+                "nt_username": "alice.nt",
             },
             {
-                "Personnel Number": "P002",
-                "Name": "Bob No Account",
-                "Identification Number": "ID002",
-                "Department": "Risk",
+                "worker_personnel_number": "P002",
+                "full_name": "Bob No Account",
+                "identification_number": "ID002",
+                "department": "Risk",
             },
-        ],
-    )
-    writer.write_rows(
-        "stg_hris_appendix_3_crm",
-        run_id,
-        "hris",
-        "Appendix 3 (CRM)",
-        [
-            {
-                "PersonnelNumber": "P001",
-                "BOVNT_Custom": "alice.nt",
-                "IdentityEmail": "alice@example.test",
-                "ID Number": "ID001",
-                "Full Name": "Alice Staff",
-                "Department Name": "Internal Audit",
-                "Section Name": "Reviews",
-                "Sub-section": "Banking",
-                "Branch Posted": "HQ",
-                "Main Department": "Audit",
-                "Main Section": "IA",
-                "Main Sub-section": "Ops",
-                "Primary Position": "AUD",
-                "Primary Position Description": "Senior Auditor",
-                "Primary Position Category": "Professional",
-                "Manager Name": "Manager One",
-                "Manager Position": "Head",
-                "Manager Email": "manager@example.test",
-                "LastName": "Staff",
-                "FirstName": "Alice",
-            }
         ],
     )
     writer.write_rows(
@@ -194,11 +174,11 @@ def test_staff_transform_refreshes_final_table_on_rerun(tmp_path: Path) -> None:
 
         second_run_id = create_test_run(db)
         StagingWriter(db).write_rows(
-            "stg_hris_staff_identification",
+            "stg_hris_consolidated",
             second_run_id,
             "hris",
-            "Staff Identification",
-            [{"Personnel Number": "P003", "Name": "Fresh Staff"}],
+            "hris_consolidated",
+            [{"worker_personnel_number": "P003", "full_name": "Fresh Staff"}],
         )
         job.run(second_run_id, None, None)
 

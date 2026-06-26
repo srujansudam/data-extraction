@@ -87,6 +87,16 @@ class PipelineJobBuilder:
         )
 
     def _build_staging_job(self, job_name: str) -> BaseExtractionJob:
+        if job_name in self.hris_dynamics_endpoints:
+            return HrisDynamicsEndpointStagingJob(
+                db=self.db,
+                source_client=self._hris_dynamics_client(job_name),
+                staging_writer=self.staging_writer,
+                endpoint_name=job_name,
+                endpoint_config=self._hris_dynamics_endpoint(job_name),
+                timezone=self.timezone,
+            )
+
         if job_name in ORION_STAGING_JOB_CLASSES:
             return create_orion_staging_job(
                 job_name=job_name,
@@ -106,15 +116,6 @@ class PipelineJobBuilder:
             )
 
         if job_name in HRIS_STAGING_JOB_CLASSES:
-            if self.hris_dynamics_endpoints:
-                return HrisDynamicsEndpointStagingJob(
-                    db=self.db,
-                    source_client=self._hris_dynamics_client(job_name),
-                    staging_writer=self.staging_writer,
-                    endpoint_name=job_name,
-                    endpoint_config=self._hris_dynamics_endpoint(job_name),
-                    timezone=self.timezone,
-                )
             return create_hris_staging_job(
                 job_name=job_name,
                 db=self.db,
@@ -146,6 +147,7 @@ class PipelineJobBuilder:
                 *ORION_STAGING_JOB_CLASSES,
                 *FLEXCUBE_STAGING_JOB_CLASSES,
                 *HRIS_STAGING_JOB_CLASSES,
+                *self.hris_dynamics_endpoints,
                 *LOTUS_EXCEL_STAGING_JOB_CLASSES,
             ]
         )
@@ -165,12 +167,14 @@ class PipelineJobBuilder:
 
     def _hris_dynamics_client(self, job_name: str) -> HrisDynamicsClient:
         source_client = self._source_client("hris", job_name)
-        if not isinstance(source_client, HrisDynamicsClient):
+        if not isinstance(source_client, HrisDynamicsClient) and not callable(
+            getattr(source_client, "fetch_endpoint", None)
+        ):
             raise ValueError(
                 f"HRIS staging job '{job_name}' requires an HRIS Dynamics client when "
                 "HRIS Dynamics endpoints are configured."
             )
-        return source_client
+        return source_client  # type: ignore[return-value]
 
     def _hris_dynamics_endpoint(self, job_name: str) -> HrisDynamicsEndpointConfig:
         try:

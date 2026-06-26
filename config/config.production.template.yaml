@@ -65,57 +65,42 @@ sources:
       secret_ref: HRIS_D365_PROD
       token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
       scope: https://operations-bovd365.api.crm4.dynamics.com/.default
-      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<one_table_name>?$top=1
+      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees?$top=1
       endpoints:
-        hris_staff_identification:
-          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<staff_identification_table>
-          target_table: stg_hris_staff_identification
+        hris_consolidated:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees
+          target_table: stg_hris_consolidated
           columns:
-            personnel_number: Personnel Number
-            name: Name
-            identification_number: Identification Number
-            department: Department
-            primary_position_description: Primary Position Description
-            primary_position_category: Primary Position Category
-        hris_personnel_contact_detail:
-          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<personnel_contact_detail_table>
-          target_table: stg_hris_personnel_contact_detail
-          columns:
-            personnel_number: Personnel Number
-            national_id: National ID
-            first_name: First Name
-            last_name: Last Name
-            department_name: Department Name
-            relationship_type: Relationship Type
-            rel_first_name: Rel First Name
-            rel_last_name: Rel Last Name
-            rel_national_id: Rel National ID
-            rel_gender: Rel Gender
-        hris_appendix_3_crm:
-          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<appendix_3_crm_table>
-          target_table: stg_hris_appendix_3_crm
-          columns:
-            personnel_number: PersonnelNumber
-            bovnt_custom: BOVNT_Custom
-            identity_email: IdentityEmail
-            id_number: ID Number
-            full_name: Full Name
-            exco_member: EXCO Member
-            department_name: Department Name
-            section_name: Section Name
-            sub_section: Sub-section
-            branch_posted: Branch Posted
-            main_department: Main Department
-            main_section: Main Section
-            main_sub_section: Main Sub-section
-            primary_position: Primary Position
-            primary_position_description: Primary Position Description
-            primary_position_category: Primary Position Category
-            manager_name: Manager Name
-            manager_position: Manager Position
-            manager_email: Manager Email
-            last_name: LastName
-            first_name: FirstName
+            hris_employee_id: crfe9_hrisemployeeid
+            worker_personnel_number: crfe9_workerpersonnelnumber
+            manager_personnel_number: crfe9_managerpersonnelnumber
+            first_name: crfe9_firstname
+            last_name: crfe9_lastname
+            full_name: crfe9_name
+            email: crfe9_identityemail
+            identification_number: crfe9_identificationnumber
+            worker_status: crfe9_workerstatus
+            employment_start_date: crfe9_employmentstartdate
+            employment_end_date: crfe9_employmentenddate
+            is_primary_position: crfe9_isprimaryposition
+            department: crfe9_department
+            department_number: crfe9_departmentnumber
+            section: crfe9_section
+            subsection: crfe9_subsection
+            chief_officer: crfe9_chiefofficer
+            position_id: crfe9_positionid
+            position_type: crfe9_positiontypeid
+            position_description: crfe9_description
+            parent_position_id: crfe9_parentpositionid
+            parent_position_description: crfe9_parentpositiondescription
+            manager_name: crfe9_managername
+            manager_email: crfe9_manageremail
+            manager_bovnt: crfe9_managerbovnt
+            nt_username: crfe9_bovnt_custom
+            created_on: createdon
+            modified_on: modifiedon
+            state_code: statecode
+            status_code: statuscode
 
   lotus_notes:
     enabled: true

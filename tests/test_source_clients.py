@@ -126,11 +126,11 @@ sources:
       token_url: https://login.microsoftonline.com/{{tenant_id}}/oauth2/v2.0/token
       scope: https://example.crm/.default
       endpoints:
-        hris_staff_identification:
-          url: https://example.crm/api/data/v9.2/staff
-          target_table: stg_hris_staff_identification
+        hris_consolidated:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees
+          target_table: stg_hris_consolidated
           columns:
-            personnel_number: employee_id
+            worker_personnel_number: crfe9_workerpersonnelnumber
   lotus_notes:
     enabled: true
     mode: excel

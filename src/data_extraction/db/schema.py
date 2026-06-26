@@ -456,6 +456,7 @@ STAGING_TABLE_NAMES = [
     "stg_flexcube_enquiry",
     "stg_flexcube_deceased_customers",
     "stg_flexcube_user_details",
+    "stg_hris_consolidated",
     "stg_hris_staff_identification",
     "stg_hris_personnel_contact_detail",
     "stg_hris_appendix_3_crm",

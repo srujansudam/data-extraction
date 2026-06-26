@@ -51,11 +51,40 @@ def source_clients() -> dict[str, FakeSourceClient]:
     }
 
 
+def hris_consolidated_endpoint() -> HrisDynamicsEndpointConfig:
+    return HrisDynamicsEndpointConfig(
+        url="https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees",
+        target_table="stg_hris_consolidated",
+        columns={"worker_personnel_number": "crfe9_workerpersonnelnumber"},
+    )
+
+
+def dynamics_source_clients() -> dict[str, FakeSourceClient | HrisDynamicsClient]:
+    endpoint_config = hris_consolidated_endpoint()
+    return {
+        "orion": FakeSourceClient(),
+        "flexcube": FakeSourceClient(),
+        "hris": HrisDynamicsClient(
+            HrisDynamics365Config(
+                tenant_id="tenant",
+                client_id="client",
+                secret_ref="HRIS_D365_PROD",
+                token_url="https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+                scope="https://example.crm/.default",
+                endpoints={"hris_consolidated": endpoint_config},
+            ),
+            FakeSecretProvider(),
+        ),
+    }
+
+
 def create_builder(tmp_path: Path) -> PipelineJobBuilder:
+    endpoint_config = hris_consolidated_endpoint()
     return PipelineJobBuilder(
         db=SQLiteAdapter(str(tmp_path / "test.db")),
-        source_clients=source_clients(),
+        source_clients=dynamics_source_clients(),  # type: ignore[arg-type]
         lotus_excel_file_paths=lotus_file_paths(),
+        hris_dynamics_endpoints={"hris_consolidated": endpoint_config},
     )
 
 
@@ -140,11 +169,7 @@ def test_corba_connector_builds_corba_staging_jobs_without_excel_paths(
 
 
 def test_hris_dynamics_endpoint_config_builds_dynamics_staging_job(tmp_path: Path) -> None:
-    endpoint_config = HrisDynamicsEndpointConfig(
-        url="https://example.crm/api/data/v9.2/staff",
-        target_table="stg_hris_staff_identification",
-        columns={"personnel_number": "employee_id"},
-    )
+    endpoint_config = hris_consolidated_endpoint()
     hris_client = HrisDynamicsClient(
         HrisDynamics365Config(
             tenant_id="tenant",
@@ -152,7 +177,7 @@ def test_hris_dynamics_endpoint_config_builds_dynamics_staging_job(tmp_path: Pat
             secret_ref="HRIS_D365_PROD",
             token_url="https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
             scope="https://example.crm/.default",
-            endpoints={"hris_staff_identification": endpoint_config},
+            endpoints={"hris_consolidated": endpoint_config},
         ),
         FakeSecretProvider(),
     )
@@ -164,14 +189,14 @@ def test_hris_dynamics_endpoint_config_builds_dynamics_staging_job(tmp_path: Pat
             "hris": hris_client,
         },
         lotus_excel_file_paths=lotus_file_paths(),
-        hris_dynamics_endpoints={"hris_staff_identification": endpoint_config},
+        hris_dynamics_endpoints={"hris_consolidated": endpoint_config},
     )
 
-    jobs = builder.build_staging_jobs(["hris_staff_identification"])
+    jobs = builder.build_staging_jobs(["hris_consolidated"])
 
     assert len(jobs) == 1
     assert isinstance(jobs[0], HrisDynamicsEndpointStagingJob)
-    assert jobs[0].target_table == "stg_hris_staff_identification"
+    assert jobs[0].target_table == "stg_hris_consolidated"
 
 
 def _staging_definition_name(job_name: str) -> str:

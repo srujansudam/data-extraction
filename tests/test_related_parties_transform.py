@@ -22,14 +22,12 @@ def create_test_run(db: SQLiteAdapter) -> int:
 def stage_related_party_inputs(db: SQLiteAdapter, run_id: int) -> None:
     writer = StagingWriter(db)
     writer.write_rows(
-        "stg_hris_personnel_contact_detail",
+        "stg_hris_consolidated",
         run_id,
         "hris",
-        "Personnel Contact Detail",
+        "hris_consolidated",
         [
-            {"National ID": "STAFFID", "Rel National ID": "RELID", "Relationship Type": "Sibling"},
-            {"National ID": "STAFFID", "Rel National ID": "RELID", "Relationship Type": "Parent"},
-            {"National ID": "MISSING", "Rel National ID": "RELID"},
+            {"worker_personnel_number": "P001", "identification_number": "STAFFID"},
         ],
     )
     writer.write_rows(
@@ -80,11 +78,10 @@ def test_related_parties_transform_builds_hris_and_orion_rows(tmp_path: Path) ->
             """
         )
 
-        assert result.rows_read == 5
-        assert result.rows_inserted == 2
+        assert result.rows_read == 3
+        assert result.rows_inserted == 1
         assert rows == [
             {"user_code": "U001", "customer_code": "CLINKED"},
-            {"user_code": "U001", "customer_code": "CREL"},
         ]
     finally:
         db.close()
@@ -118,17 +115,24 @@ def test_related_parties_transform_refreshes_final_table_on_rerun(tmp_path: Path
             [{"identification_number": "REL2", "customer_code": "CREL2"}],
         )
         writer.write_rows(
-            "stg_hris_personnel_contact_detail",
+            "stg_hris_consolidated",
             second_run_id,
             "hris",
-            "Personnel Contact Detail",
-            [{"National ID": "STAFF2", "Rel National ID": "REL2"}],
+            "hris_consolidated",
+            [{"worker_personnel_number": "P002", "identification_number": "STAFF2"}],
+        )
+        writer.write_rows(
+            "stg_orion_customer_links",
+            second_run_id,
+            "orion",
+            "ORION.CUSTOMER_LINK",
+            [{"customer_code": "CREL2", "linked_customer_code": "CLINKED2"}],
         )
 
         job.run(second_run_id, None, None)
 
         rows = db.query_all("SELECT user_code, customer_code FROM related_parties")
 
-        assert rows == [{"user_code": "U002", "customer_code": "CREL2"}]
+        assert rows == []
     finally:
         db.close()

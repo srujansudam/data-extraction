@@ -48,13 +48,14 @@ sources:
       secret_ref: HRIS_D365_PROD
       scope: https://operations-bovd365.api.crm4.dynamics.com/.default
       token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
-      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<table>?$top=1
+      health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees?$top=1
       endpoints:
-        hris_staff_identification:
-          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/<table>
-          target_table: stg_hris_staff_identification
+        hris_consolidated:
+          url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees
+          target_table: stg_hris_consolidated
           columns:
-            personnel_number: employee_id
+            worker_personnel_number: crfe9_workerpersonnelnumber
+            full_name: crfe9_name
 ```
 
 Oracle endpoint details for ORION/Flexcube should live in KeePass entries, not in config. HRIS uses Dynamics 365 / Dataverse API endpoints in config and resolves only the client secret from KeePass. Lotus Excel file paths are configured under `sources.lotus_notes.files`.

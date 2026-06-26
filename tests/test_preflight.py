@@ -162,12 +162,13 @@ dynamics365:
   secret_ref: HRIS_D365_PROD
   token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
   scope: https://example.crm/.default
+  health_check_url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees?$top=1
   endpoints:
-    hris_staff_identification:
-      url: https://example.crm/api/data/v9.2/staff
-      target_table: stg_hris_staff_identification
+    hris_consolidated:
+      url: https://operations-bovd365.api.crm4.dynamics.com/api/data/v9.2/crfe9_hrisemployees
+      target_table: stg_hris_consolidated
       columns:
-        personnel_number: employee_id
+        worker_personnel_number: crfe9_workerpersonnelnumber
 """,
     )
 
@@ -215,7 +216,7 @@ dynamics365:
   token_url: https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
   scope: https://example.crm/.default
   endpoints:
-    hris_staff_identification:
+    hris_consolidated:
       url: ""
       target_table: ""
 """,
@@ -225,8 +226,8 @@ dynamics365:
 
     assert result["status"] == "failed"
     hris_check = check_by_name(result, "hris_dynamics365")
-    assert "hris_staff_identification.url" in hris_check["message"]
-    assert "hris_staff_identification.target_table" in hris_check["message"]
+    assert "hris_consolidated.url" in hris_check["message"]
+    assert "hris_consolidated.target_table" in hris_check["message"]
 
 
 def test_preflight_fails_if_see_database_secret_ref_is_missing(tmp_path: Path) -> None:

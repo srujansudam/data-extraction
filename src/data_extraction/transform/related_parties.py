@@ -27,9 +27,11 @@ class RelatedPartiesTransformJob(BaseTransformJob):
         window_start: str | None,
         window_end: str | None,
     ) -> TransformResult:
-        hris_rows = self.staging_reader.read_payloads(
-            "stg_hris_personnel_contact_detail", run_id=run_id
-        )
+        hris_rows = self.staging_reader.read_payloads("stg_hris_consolidated", run_id=run_id)
+        if not hris_rows:
+            hris_rows = self.staging_reader.read_payloads(
+                "stg_hris_personnel_contact_detail", run_id=run_id
+            )
         customer_links = self.staging_reader.read_payloads("stg_orion_customer_links", run_id=run_id)
         flexcube_users = self.staging_reader.read_payloads("stg_flexcube_user_details", run_id=run_id)
         identity_rows = self.staging_reader.read_payloads(

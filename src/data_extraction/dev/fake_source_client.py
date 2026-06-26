@@ -261,3 +261,42 @@ class FakeSourceClient:
             ]
 
         return []
+
+    def fetch_endpoint(self, endpoint_name: str) -> list[dict[str, Any]]:
+        if endpoint_name != "hris_consolidated":
+            return []
+        return [
+            {
+                "hris_employee_id": "HRIS001",
+                "worker_personnel_number": "P001",
+                "manager_personnel_number": "M001",
+                "first_name": "Dry",
+                "last_name": "Staff",
+                "full_name": "Dry Run Staff",
+                "email": "dry.user@example.test",
+                "identification_number": "ID001",
+                "worker_status": "Active",
+                "employment_start_date": "2020-01-01",
+                "employment_end_date": None,
+                "is_primary_position": True,
+                "department": "Audit",
+                "department_number": "D001",
+                "section": "Internal Audit",
+                "subsection": "Data",
+                "chief_officer": "Chief Audit",
+                "position_id": "AUD",
+                "position_type": "Professional",
+                "position_description": "Auditor",
+                "parent_position_id": "MGR",
+                "parent_position_description": "Manager",
+                "manager_name": "Audit Manager",
+                "manager_email": "manager@example.test",
+                "manager_bovnt": "manager.user",
+                "nt_username": "dry.user",
+                "created_on": "2026-01-01T00:00:00Z",
+                "modified_on": "2026-05-25T00:00:00Z",
+                "state_code": 0,
+                "status_code": 1,
+                "_raw_record": {"crfe9_hrisemployeeid": "HRIS001"},
+            }
+        ]
