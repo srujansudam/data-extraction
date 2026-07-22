@@ -6,7 +6,7 @@ from data_extraction.connectors.hris_dynamics import HrisDynamicsClient
 from data_extraction.connectors.lotus_corba import LotusCorbaConnector
 from data_extraction.db.adapter import DatabaseAdapter
 from data_extraction.jobs.base import BaseExtractionJob
-from data_extraction.jobs.factory import create_job
+from data_extraction.jobs.factory import JOB_CLASSES, create_job
 from data_extraction.jobs.staging.factory import (
     FLEXCUBE_STAGING_JOB_CLASSES,
     HRIS_STAGING_JOB_CLASSES,
@@ -25,6 +25,7 @@ from data_extraction.jobs.staging.lotus_corba import (
 from data_extraction.pipeline.definitions import (
     DIRECT_JOB_ORDER,
     STAGING_JOB_ORDER,
+    STAGING_JOB_SOURCES,
     TRANSFORM_JOB_ORDER,
 )
 from data_extraction.staging.writer import StagingWriter
@@ -40,6 +41,7 @@ class PipelineJobBuilder:
         lotus_excel_file_paths: dict[str, str],
         hris_dynamics_endpoints: dict[str, HrisDynamicsEndpointConfig] | None = None,
         lotus_corba_connector: LotusCorbaConnector | None = None,
+        enabled_sources: set[str] | None = None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
@@ -47,11 +49,12 @@ class PipelineJobBuilder:
         self.lotus_excel_file_paths = lotus_excel_file_paths
         self.hris_dynamics_endpoints = hris_dynamics_endpoints or {}
         self.lotus_corba_connector = lotus_corba_connector
+        self.enabled_sources = enabled_sources
         self.timezone = timezone
         self.staging_writer = StagingWriter(db)
 
     def build_direct_jobs(self, job_names: list[str] | None = None) -> list[BaseExtractionJob]:
-        selected_job_names = job_names or DIRECT_JOB_ORDER
+        selected_job_names = self._filter_direct_job_names(job_names or DIRECT_JOB_ORDER)
         return [
             create_job(
                 job_name=job_name,
@@ -63,7 +66,7 @@ class PipelineJobBuilder:
         ]
 
     def build_staging_jobs(self, job_names: list[str] | None = None) -> list[BaseExtractionJob]:
-        selected_job_names = job_names or STAGING_JOB_ORDER
+        selected_job_names = self._filter_staging_job_names(job_names or STAGING_JOB_ORDER)
         return [self._build_staging_job(job_name) for job_name in selected_job_names]
 
     def build_transform_jobs(self, job_names: list[str] | None = None) -> list[BaseTransformJob]:
@@ -195,3 +198,40 @@ class PipelineJobBuilder:
                 f"Missing Lotus Excel file path for staging job '{job_name}'. "
                 f"Available Lotus file paths: {available_paths}"
             ) from exc
+
+    def _filter_direct_job_names(self, job_names: list[str]) -> list[str]:
+        if self.enabled_sources is None:
+            return job_names
+
+        return [
+            job_name
+            for job_name in job_names
+            if self._direct_job_source(job_name) in self.enabled_sources
+        ]
+
+    def _filter_staging_job_names(self, job_names: list[str]) -> list[str]:
+        if self.enabled_sources is None:
+            return job_names
+
+        return [
+            job_name
+            for job_name in job_names
+            if self._staging_job_source(job_name) in self.enabled_sources
+        ]
+
+    def _direct_job_source(self, job_name: str) -> str:
+        try:
+            return JOB_CLASSES[job_name].source_system
+        except KeyError as exc:
+            available_jobs = ", ".join(sorted(JOB_CLASSES))
+            raise ValueError(f"Unknown job '{job_name}'. Available jobs: {available_jobs}") from exc
+
+    def _staging_job_source(self, job_name: str) -> str:
+        if job_name in STAGING_JOB_SOURCES:
+            return STAGING_JOB_SOURCES[job_name]
+        if job_name in self.hris_dynamics_endpoints:
+            return "hris"
+        known_jobs = sorted([*STAGING_JOB_SOURCES, *self.hris_dynamics_endpoints])
+        raise ValueError(
+            f"Unknown staging job '{job_name}'. Available staging jobs: {', '.join(known_jobs)}"
+        )

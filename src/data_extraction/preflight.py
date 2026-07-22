@@ -160,6 +160,13 @@ def _check_database_encryption_config(checks: list[dict[str, str]], settings: Se
 def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings) -> None:
     for display_name, config_attr in REQUIRED_SOURCE_SECRET_REFS.items():
         source_config = getattr(settings.sources, config_attr)
+        if not source_config.enabled:
+            _add_skipped(
+                checks,
+                f"{config_attr}_secret_ref",
+                f"{display_name} source is disabled. SKIPPED (disabled)",
+            )
+            continue
         if config_attr == "hris" and (source_config.type or "oracle").lower() == "dynamics365":
             continue
         if not source_config.secret_ref:
@@ -179,6 +186,10 @@ def _check_required_secret_refs(checks: list[dict[str, str]], settings: Settings
 
 def _check_hris_dynamics_config(checks: list[dict[str, str]], settings: Settings) -> None:
     hris_config = settings.sources.hris
+    if not hris_config.enabled:
+        _add_skipped(checks, "hris_dynamics365", "HRIS source is disabled. SKIPPED (disabled)")
+        return
+
     if (hris_config.type or "oracle").lower() != "dynamics365":
         _add_pass(checks, "hris_source_type", "HRIS source is not Dynamics 365.")
         return
@@ -336,7 +347,11 @@ def _check_secret_provider_config(
 def _check_lotus_excel_config(checks: list[dict[str, str]], settings: Settings) -> None:
     lotus_config = settings.sources.lotus_notes
     if not lotus_config.enabled:
-        _add_pass(checks, "lotus_excel_files", "Lotus Notes source is disabled.")
+        _add_skipped(
+            checks,
+            "lotus_excel_files",
+            "Lotus Notes source is disabled. SKIPPED (disabled)",
+        )
         return
 
     if lotus_config.mode == "corba":
@@ -405,3 +420,7 @@ def _add_pass(checks: list[dict[str, str]], name: str, message: str) -> None:
 
 def _add_failure(checks: list[dict[str, str]], name: str, message: str) -> None:
     checks.append({"name": name, "status": "failed", "message": message})
+
+
+def _add_skipped(checks: list[dict[str, str]], name: str, message: str) -> None:
+    checks.append({"name": name, "status": "skipped", "message": message})

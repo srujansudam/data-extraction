@@ -23,6 +23,8 @@ class FakeSourceClient:
 
 
 class FakePipelineJobBuilder:
+    last_instance: FakePipelineJobBuilder | None = None
+
     def __init__(
         self,
         db,
@@ -30,6 +32,7 @@ class FakePipelineJobBuilder:
         lotus_excel_file_paths: dict[str, str],
         hris_dynamics_endpoints=None,
         lotus_corba_connector=None,
+        enabled_sources: set[str] | None = None,
         timezone: str = "Europe/Malta",
     ) -> None:
         self.db = db
@@ -37,7 +40,9 @@ class FakePipelineJobBuilder:
         self.lotus_excel_file_paths = lotus_excel_file_paths
         self.hris_dynamics_endpoints = hris_dynamics_endpoints
         self.lotus_corba_connector = lotus_corba_connector
+        self.enabled_sources = enabled_sources
         self.timezone = timezone
+        self.__class__.last_instance = self
 
     def build_full_pipeline(
         self,
@@ -73,7 +78,12 @@ class FakeFullPipelineRunner:
         return 99
 
 
-def write_config(tmp_path: Path, lotus_files: dict[str, Path] | None = None) -> Path:
+def write_config(
+    tmp_path: Path,
+    lotus_files: dict[str, Path] | None = None,
+    *,
+    lotus_enabled: bool = True,
+) -> Path:
     lotus_file_lines = ""
     if lotus_files is not None:
         lotus_file_lines = "    files:\n" + "".join(
@@ -104,7 +114,7 @@ sources:
     secret_ref: HRIS_DB
     enabled: true
   lotus_notes:
-    enabled: true
+    enabled: {str(lotus_enabled).lower()}
     mode: excel
     secret_ref: LOTUS_NOTES
     excel_input_folder: data/lotus_notes/incoming
@@ -210,3 +220,34 @@ def test_configured_pipeline_runs_with_monkeypatched_source_clients(
         assert tables == []
     finally:
         connection.close()
+
+
+@pytest.mark.parametrize("run_type", ["daily", "backfill"])
+def test_configured_pipeline_runs_with_lotus_disabled_without_lotus_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    run_type: str,
+    capsys,
+) -> None:
+    from data_extraction.pipeline.configured_run import run_configured_pipeline
+
+    patch_configured_pipeline(monkeypatch)
+    FakePipelineJobBuilder.last_instance = None
+    config_path = write_config(tmp_path, lotus_files=None, lotus_enabled=False)
+
+    run_id = run_configured_pipeline(
+        str(config_path),
+        run_type=run_type,
+        triggered_by="test",
+        reset_db=True,
+    )
+
+    assert run_id == 99
+    assert FakePipelineJobBuilder.last_instance is not None
+    assert FakePipelineJobBuilder.last_instance.lotus_excel_file_paths == {}
+    assert FakePipelineJobBuilder.last_instance.lotus_corba_connector is None
+    assert FakePipelineJobBuilder.last_instance.enabled_sources == {"orion", "flexcube", "hris"}
+    log_text = capsys.readouterr().err
+    assert "Lotus Notes ........ SKIPPED (disabled)" in log_text
+    assert "Overall result:" in log_text
+    assert "SUCCESS" in log_text

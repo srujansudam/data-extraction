@@ -184,6 +184,7 @@ def test_lotus_corba_failure_does_not_leak_password(
     assert "--password', '[REDACTED]'" in caplog.text
     assert "[REDACTED]" in caplog.text
     assert "exit_code=2" in caplog.text
+    assert "stderr bytes=" not in str(exc_info.value)
 
 
 def test_lotus_corba_secret_failure_does_not_leak_password(
@@ -207,3 +208,97 @@ def test_lotus_corba_secret_failure_does_not_leak_password(
 
     assert str(exc_info.value) == "Lotus CORBA secret could not be resolved."
     assert "super-secret-lotus-password" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("stderr_text", "expected_text"),
+    [
+        (
+            "Lotus CORBA extraction failed.\n"
+            "Execution context:\n"
+            "dataset=bov_employees\n"
+            "server=Pinto/BOV\n"
+            "database=BOV\\bov_employees.nsf\n"
+            "view=(EY - bov_employees)\n"
+            "replica_id=C1250000:00000000\n\n"
+            "Exception:\n"
+            "class=lotus.domino.NotesException\n"
+            "NotesException\n"
+            "id=4811\n"
+            "message=You are not authorized to perform this operation\n",
+            "id=4811",
+        ),
+        (
+            "Lotus CORBA extraction failed.\n"
+            "Exception:\n"
+            "class=lotus.domino.NotesException\n"
+            "NotesException\n"
+            "id=4005\n"
+            "message=Database does not exist\n",
+            "Database does not exist",
+        ),
+        (
+            "Lotus CORBA extraction failed.\n"
+            "Exception:\n"
+            "class=lotus.domino.NotesException\n"
+            "NotesException\n"
+            "id=1028\n"
+            "message=View does not exist\n",
+            "View does not exist",
+        ),
+        (
+            "Lotus CORBA extraction failed.\n"
+            "Exception:\n"
+            "class=java.lang.RuntimeException\n"
+            "message=DIIOP connection timed out\n\n"
+            "Root cause:\n"
+            "class=java.net.SocketTimeoutException\n"
+            "message=Read timed out\n",
+            "java.net.SocketTimeoutException",
+        ),
+    ],
+)
+def test_lotus_corba_failure_logs_original_java_stderr(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    stderr_text: str,
+    expected_text: str,
+) -> None:
+    def fake_run(args, capture_output, check, text):
+        if "-version" in args:
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=1,
+            stdout="",
+            stderr=stderr_text + "super-secret-lotus-password",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    connector = LotusCorbaConnector(create_config(tmp_path), FakeSecretProvider())
+
+    caplog.set_level(logging.ERROR)
+    with pytest.raises(RuntimeError) as exc_info:
+        connector.extract_dataset("bov_employees")
+
+    assert expected_text in caplog.text
+    assert expected_text in str(exc_info.value)
+    assert "stderr:" in caplog.text
+    assert "super-secret-lotus-password" not in caplog.text
+    assert "super-secret-lotus-password" not in str(exc_info.value)
+    assert "[REDACTED]" in caplog.text
+
+
+def test_lotus_corba_java_reader_prints_notes_exception_diagnostics() -> None:
+    java_source = Path(
+        "java/lotus-corba-reader/src/main/java/com/bov/audit/lotus/LotusCorbaReader.java"
+    ).read_text(encoding="utf-8")
+
+    assert "printFailureDiagnostics(exception, options)" in java_source
+    assert "NotesException" in java_source
+    assert "notesException.id" in java_source
+    assert "notesException.text" in java_source
+    assert "exception.printStackTrace(System.err)" in java_source
+    assert 'options.get("username")' not in java_source
+    assert 'options.get("password")' not in java_source

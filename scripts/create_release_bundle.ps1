@@ -74,10 +74,14 @@ Next steps on client VM:
 5. Keep database.encryption: see for production.
 6. Configure INTERNAL_AUDIT_DB_KEY in KeePass. It can be stored as the entry password or as custom field key.
 7. Compile/copy the licensed SEE-enabled sqlite3.dll beside data-extraction.exe before running an encrypted DB.
-8. Update config\config.yaml with KeePass entry titles and Lotus Excel file paths.
-9. Keep Lotus Notes mode set to excel and place the extracts under lotus_notes\incoming.
-   Phase 2 CORBA is optional. To enable it after VM validation, supply Java 8,
-   notes.jar, ncso.jar, diiop_ior.txt, LOTUS_NOTES_PROD, and update config.yaml.
+8. Update config\config.yaml with KeePass entry titles. Lotus Notes is currently
+   disabled in the production template while BOV IT resolves CORBA access.
+9. Keep sources.lotus_notes.enabled: false until Lotus is available. Preflight
+   and daily/backfill summaries will show Lotus Notes as SKIPPED (disabled).
+   To enable Excel later, set enabled: true, keep mode: excel, and place the
+   extracts under lotus_notes\incoming. Phase 2 CORBA is optional. To enable it
+   after VM validation, supply Java 8, notes.jar, ncso.jar, diiop_ior.txt,
+   LOTUS_NOTES_PROD, and update config.yaml.
 10. Run:
    .\data-extraction.exe --config .\config\config.yaml preflight
 11. Verify packaged runtime dependencies for Oracle thin mode:

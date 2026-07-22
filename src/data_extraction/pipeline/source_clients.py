@@ -6,7 +6,7 @@ from data_extraction.connectors.hris_dynamics import HrisDynamicsClient
 from data_extraction.connectors.oracle import OracleConnector
 from data_extraction.secrets.base import SecretProvider
 
-REQUIRED_ORACLE_SOURCES = ("orion", "flexcube")
+ORACLE_SOURCE_NAMES = ("orion", "flexcube")
 SUPPORTED_HRIS_TYPES = {"oracle", "dynamics365"}
 
 
@@ -15,12 +15,16 @@ def build_oracle_source_clients(
     secret_provider: SecretProvider,
 ) -> dict[str, SourceQueryClient]:
     source_clients: dict[str, SourceQueryClient] = {}
-    source_configs = {source_name: getattr(settings.sources, source_name) for source_name in REQUIRED_ORACLE_SOURCES}
+    source_configs = {source_name: getattr(settings.sources, source_name) for source_name in ORACLE_SOURCE_NAMES}
 
     for source_name, source_config in source_configs.items():
+        if not source_config.enabled:
+            continue
         _validate_source_config(source_name, source_config)
 
     for source_name, source_config in source_configs.items():
+        if not source_config.enabled:
+            continue
         connector = OracleConnector.from_secret_ref(
             secret_provider=secret_provider,
             secret_ref=source_config.secret_ref or "",
@@ -29,6 +33,9 @@ def build_oracle_source_clients(
         source_clients[source_name] = connector
 
     hris_config = settings.sources.hris
+    if not hris_config.enabled:
+        return source_clients
+
     _validate_hris_config(hris_config)
     if (hris_config.type or "oracle").lower() == "dynamics365":
         source_clients["hris"] = HrisDynamicsClient(
@@ -54,17 +61,11 @@ def close_source_clients(source_clients: dict[str, SourceQueryClient]) -> None:
 
 
 def _validate_source_config(source_name: str, source_config: SourceConfig) -> None:
-    if not source_config.enabled:
-        raise ValueError(f"Required source '{source_name}' is disabled.")
-
     if not source_config.secret_ref:
-        raise ValueError(f"Required source '{source_name}' is missing secret_ref.")
+        raise ValueError(f"Enabled source '{source_name}' is missing secret_ref.")
 
 
 def _validate_hris_config(source_config: SourceConfig) -> None:
-    if not source_config.enabled:
-        raise ValueError("Required source 'hris' is disabled.")
-
     source_type = (source_config.type or "oracle").lower()
     if source_type not in SUPPORTED_HRIS_TYPES:
         supported = ", ".join(sorted(SUPPORTED_HRIS_TYPES))
@@ -72,7 +73,7 @@ def _validate_hris_config(source_config: SourceConfig) -> None:
 
     if source_type != "dynamics365":
         if not source_config.secret_ref:
-            raise ValueError("Required source 'hris' is missing secret_ref.")
+            raise ValueError("Enabled source 'hris' is missing secret_ref.")
         return
 
     dynamics = source_config.dynamics365

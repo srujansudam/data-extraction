@@ -56,7 +56,13 @@ class FakeHrisDynamicsClient:
         pass
 
 
-def write_config(tmp_path: Path, hris_secret_ref: str | None = "HRIS_DB") -> Path:
+def write_config(
+    tmp_path: Path,
+    hris_secret_ref: str | None = "HRIS_DB",
+    *,
+    lotus_enabled: bool = True,
+    hris_enabled: bool = True,
+) -> Path:
     hris_secret_line = f"    secret_ref: {hris_secret_ref}\n" if hris_secret_ref is not None else ""
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -79,9 +85,9 @@ sources:
     enabled: true
   hris:
     type: oracle
-{hris_secret_line}    enabled: true
+{hris_secret_line}    enabled: {str(hris_enabled).lower()}
   lotus_notes:
-    enabled: true
+    enabled: {str(lotus_enabled).lower()}
     mode: excel
 extraction:
   daily_mode: previous_day
@@ -207,5 +213,24 @@ def test_build_oracle_source_clients_raises_for_missing_secret_ref(
     )
     settings = load_settings(write_config(tmp_path, hris_secret_ref=None))
 
-    with pytest.raises(ValueError, match="Required source 'hris' is missing secret_ref"):
+    with pytest.raises(ValueError, match="Enabled source 'hris' is missing secret_ref"):
         build_oracle_source_clients(settings, FakeSecretProvider())
+
+
+def test_build_source_clients_skips_disabled_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeOracleConnector.created_refs = []
+    FakeOracleConnector.connected_refs = []
+    monkeypatch.setattr(
+        "data_extraction.pipeline.source_clients.OracleConnector",
+        FakeOracleConnector,
+    )
+    settings = load_settings(write_config(tmp_path, hris_enabled=False))
+
+    source_clients = build_oracle_source_clients(settings, FakeSecretProvider())
+
+    assert list(source_clients) == ["orion", "flexcube"]
+    assert FakeOracleConnector.created_refs == ["ORION_DB", "FLEXCUBE_DB"]
+    assert FakeOracleConnector.connected_refs == ["ORION_DB", "FLEXCUBE_DB"]

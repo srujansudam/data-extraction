@@ -103,7 +103,7 @@ sources:
             status_code: statuscode
 
   lotus_notes:
-    enabled: true
+    enabled: false
 
     # Current supported mode is excel.
     # Excel remains the default fallback. Enable CORBA only after VM validation.

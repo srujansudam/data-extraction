@@ -187,3 +187,51 @@ def test_staff_transform_refreshes_final_table_on_rerun(tmp_path: Path) -> None:
         assert rows == [{"personnel_number": "P003", "staff_name": "Fresh Staff"}]
     finally:
         db.close()
+
+
+def test_staff_transform_succeeds_with_empty_lotus_staging(tmp_path: Path) -> None:
+    db = SQLiteAdapter(str(tmp_path / "test.db"))
+    db.connect()
+
+    try:
+        create_all_tables(db)
+        run_id = create_test_run(db)
+        writer = StagingWriter(db)
+        writer.write_rows(
+            "stg_hris_consolidated",
+            run_id,
+            "hris",
+            "hris_consolidated",
+            [
+                {
+                    "worker_personnel_number": "P001",
+                    "full_name": "Alice Staff",
+                    "identification_number": "ID001",
+                    "nt_username": "U001",
+                }
+            ],
+        )
+        writer.write_rows(
+            "stg_flexcube_user_details",
+            run_id,
+            "flexcube",
+            "FCBOV.SMTB_USER",
+            [{"user_code": "U001", "nt_username": "alice.nt", "id_card_number": "ID001"}],
+        )
+
+        result = StaffTransformJob(db, StagingReader(db)).run(run_id, None, None)
+
+        rows = db.query_all(
+            "SELECT personnel_number, staff_name, user_code, location FROM staff"
+        )
+        assert result.rows_inserted == 1
+        assert rows == [
+            {
+                "personnel_number": "P001",
+                "staff_name": "Alice Staff",
+                "user_code": "U001",
+                "location": None,
+            }
+        ]
+    finally:
+        db.close()

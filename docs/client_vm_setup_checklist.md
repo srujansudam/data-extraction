@@ -4,7 +4,7 @@
 
 Deploy the Internal Audit Data Extraction application on the client-provided Windows VM.
 
-The application extracts data from ORION, Flexcube, HRIS, and Lotus Notes Excel extracts, loads the local SQLite SEE database, and tracks extraction runs, job status, errors, and data quality checks.
+The application extracts data from enabled sources, loads the local SQLite SEE database, and tracks extraction runs, job status, errors, and data quality checks. ORION, Flexcube, and HRIS are enabled for the current deployment; Lotus Notes can remain disabled until BOV IT resolves CORBA access.
 
 ## 2. Target Folder Structure
 
@@ -66,9 +66,19 @@ The production config should contain:
 - source enablement flags
 - `secrets.provider: keepass`
 - KeePass secret references
-- Lotus Notes mode and file paths
+- Lotus Notes enablement, mode, and file paths if Lotus is available
 
 Create `config\config.yaml` from the production template. Only edit `config.yaml` for deployment-specific references, paths, Lotus filenames, and optional SEE activation configuration.
+
+For the current deployment, keep Lotus disabled unless BOV IT confirms Lotus access is ready:
+
+```yaml
+sources:
+  lotus_notes:
+    enabled: false
+```
+
+Preflight and daily/backfill summaries will show disabled Lotus as `SKIPPED (disabled)`.
 
 Production database encryption should be:
 
@@ -183,7 +193,7 @@ Oracle python-oracledb thin mode requires `cryptography` bundled in the
 executable. If the VM reports that thin mode cannot import `cryptography`,
 rebuild with the current PyInstaller spec and recreate the release bundle.
 
-`test-source all` must report successful connectivity for ORION, Flexcube, and HRIS before the first extraction. ORION and Flexcube use Oracle connectivity checks. HRIS uses OAuth2 client credentials and the configured Dynamics 365 / Dataverse health URL or first endpoint with `$top=1`.
+`test-source all` must report successful connectivity for enabled sources before the first extraction. ORION and Flexcube use Oracle connectivity checks. HRIS uses OAuth2 client credentials and the configured Dynamics 365 / Dataverse health URL or first endpoint with `$top=1`. Disabled sources are skipped.
 
 If enabling CORBA, also run:
 
@@ -252,7 +262,7 @@ Create the daily scheduled task using:
   -RunTime "02:00"
 ```
 
-Client IT should configure the correct service account and permissions. The service account must be able to access the application folder, SQLite database, logs, Lotus Excel files, KeePass database, and KeePass key file. If fallback `keepass_cli` is used, it must also be able to run the wrapper script.
+Client IT should configure the correct service account and permissions. The service account must be able to access the application folder, SQLite database, logs, KeePass database, and KeePass key file. If Lotus is enabled, it must also access Lotus Excel files or CORBA dependencies. If fallback `keepass_cli` is used, it must also be able to run the wrapper script.
 
 ## 11. Logs And Monitoring
 
@@ -286,7 +296,7 @@ Common issues:
 - HRIS Dynamics token or endpoint failure
 - KeePass database or key file is missing/inaccessible
 - KeePass entry fields are incomplete
-- Lotus Notes Excel file missing
+- Lotus Notes Excel file missing when Lotus is enabled
 - Invalid config path
 - Network access blocked from VM
 - DB file locked by another process

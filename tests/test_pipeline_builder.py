@@ -104,6 +104,38 @@ def test_build_staging_jobs_returns_jobs_in_staging_order(tmp_path: Path) -> Non
     assert [_staging_definition_name(job.job_name) for job in jobs] == STAGING_JOB_ORDER
 
 
+def test_build_staging_jobs_excludes_disabled_source_jobs(tmp_path: Path) -> None:
+    endpoint_config = hris_consolidated_endpoint()
+    builder = PipelineJobBuilder(
+        db=SQLiteAdapter(str(tmp_path / "test.db")),
+        source_clients=dynamics_source_clients(),  # type: ignore[arg-type]
+        lotus_excel_file_paths={},
+        hris_dynamics_endpoints={"hris_consolidated": endpoint_config},
+        enabled_sources={"orion", "flexcube", "hris"},
+    )
+
+    jobs = builder.build_staging_jobs()
+
+    assert [_staging_definition_name(job.job_name) for job in jobs] == [
+        job_name
+        for job_name in STAGING_JOB_ORDER
+        if not job_name.startswith("lotus_")
+    ]
+
+
+def test_build_direct_jobs_excludes_disabled_source_jobs(tmp_path: Path) -> None:
+    builder = PipelineJobBuilder(
+        db=SQLiteAdapter(str(tmp_path / "test.db")),
+        source_clients={"orion": FakeSourceClient()},
+        lotus_excel_file_paths={},
+        enabled_sources={"orion"},
+    )
+
+    jobs = builder.build_direct_jobs()
+
+    assert [job.job_name for job in jobs] == ["loans", "eom_book_balance"]
+
+
 def test_build_transform_jobs_returns_jobs_in_transform_order(tmp_path: Path) -> None:
     builder = create_builder(tmp_path)
 

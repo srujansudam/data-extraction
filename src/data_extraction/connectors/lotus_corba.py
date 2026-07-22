@@ -209,11 +209,26 @@ class LotusCorbaConnector:
             redact_secret_values(result.stderr or "", secret_values=secret_values),
         )
         if result.returncode != 0:
+            sanitized_stdout = redact_secret_values(result.stdout or "", secret_values=secret_values)
+            sanitized_stderr = redact_secret_values(result.stderr or "", secret_values=secret_values)
+            logger.error(
+                "Lotus CORBA extraction failed.\n\n"
+                "dataset=%s\n"
+                "database=%s\n"
+                "view=%s\n"
+                "replica_id=%s\n\n"
+                "stderr:\n%s",
+                dataset,
+                extract_config.database,
+                extract_config.view,
+                extract_config.replica_id or "",
+                sanitized_stderr,
+            )
             raise RuntimeError(
                 "Lotus CORBA extraction failed for "
                 f"{dataset} (exit code {result.returncode}; "
-                f"stdout bytes={len(result.stdout or '')}; "
-                f"stderr bytes={len(result.stderr or '')})."
+                f"stdout={sanitized_stdout or '[empty]}; "
+                f"stderr={sanitized_stderr or '[empty]})"
             )
 
     @staticmethod

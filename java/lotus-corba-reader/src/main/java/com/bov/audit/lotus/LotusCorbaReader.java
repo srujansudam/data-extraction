@@ -31,8 +31,9 @@ public final class LotusCorbaReader {
     }
 
     public static void main(String[] args) {
+        Map<String, String> options = new HashMap<String, String>();
         try {
-            Map<String, String> options = parseArgs(args);
+            options = parseArgs(args);
             if (options.containsKey("help")) {
                 printHelp();
                 return;
@@ -43,7 +44,7 @@ public final class LotusCorbaReader {
             }
             run(options);
         } catch (Exception exception) {
-            System.err.println("Lotus CORBA extraction failed: " + sanitizeMessage(exception));
+            printFailureDiagnostics(exception, options);
             System.exit(1);
         }
     }
@@ -261,12 +262,51 @@ public final class LotusCorbaReader {
         return value == null || value.isEmpty() ? null : value;
     }
 
-    private static String sanitizeMessage(Exception exception) {
-        if (exception instanceof IllegalArgumentException
-                || exception instanceof IllegalStateException) {
-            return exception.getMessage();
+    private static void printFailureDiagnostics(Exception exception, Map<String, String> options) {
+        System.err.println("Lotus CORBA extraction failed.");
+        System.err.println();
+        System.err.println("Execution context:");
+        printContextValue("dataset", options.get("dataset"));
+        printContextValue("server", options.get("server"));
+        printContextValue("database", options.get("database"));
+        printContextValue("view", options.get("view"));
+        printContextValue("replica_id", options.get("replica-id"));
+        System.err.println();
+        printExceptionDetails(exception, "Exception");
+        System.err.println();
+        System.err.println("Full Java stack trace:");
+        exception.printStackTrace(System.err);
+    }
+
+    private static void printContextValue(String name, String value) {
+        System.err.println(name + "=" + emptyIfNull(value));
+    }
+
+    private static String emptyIfNull(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static void printExceptionDetails(Throwable throwable, String label) {
+        if (throwable == null) {
+            return;
         }
-        return exception.getClass().getSimpleName();
+
+        System.err.println(label + ":");
+        System.err.println("class=" + throwable.getClass().getName());
+        if (throwable instanceof NotesException) {
+            NotesException notesException = (NotesException) throwable;
+            System.err.println("NotesException");
+            System.err.println("id=" + notesException.id);
+            System.err.println("message=" + emptyIfNull(notesException.text));
+        } else {
+            System.err.println("message=" + emptyIfNull(throwable.getMessage()));
+        }
+
+        Throwable cause = throwable.getCause();
+        if (cause != null) {
+            System.err.println();
+            printExceptionDetails(cause, "Root cause");
+        }
     }
 
     private static void recycle(lotus.domino.Base object) {

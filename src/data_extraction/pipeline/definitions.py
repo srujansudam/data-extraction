@@ -10,6 +10,13 @@ DIRECT_JOB_ORDER = [
     "enquiry",
 ]
 
+SOURCE_DISPLAY_NAMES = {
+    "orion": "ORION",
+    "flexcube": "Flexcube",
+    "hris": "HRIS",
+    "lotus_notes": "Lotus Notes",
+}
+
 STAGING_JOB_ORDER = [
     "orion_accounts",
     "orion_customers",
@@ -26,6 +33,23 @@ STAGING_JOB_ORDER = [
     "lotus_poa_revocation",
     "lotus_discrepancies_management",
 ]
+
+STAGING_JOB_SOURCES = {
+    "orion_accounts": "orion",
+    "orion_customers": "orion",
+    "orion_transactions": "orion",
+    "orion_customer_links": "orion",
+    "orion_adc_access": "orion",
+    "orion_customer_identity_lookup": "orion",
+    "flexcube_deceased_customers": "flexcube",
+    "flexcube_user_details": "flexcube",
+    "hris_consolidated": "hris",
+    "lotus_bov_employees": "lotus_notes",
+    "lotus_legal_rulings": "lotus_notes",
+    "lotus_garnishee_orders": "lotus_notes",
+    "lotus_poa_revocation": "lotus_notes",
+    "lotus_discrepancies_management": "lotus_notes",
+}
 
 TRANSFORM_JOB_ORDER = [
     "transform_account_data",

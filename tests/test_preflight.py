@@ -14,6 +14,7 @@ def write_config(
     secrets_block: str = "provider: environment",
     database_encryption: str = "none",
     database_secret_ref: str | None = "INTERNAL_AUDIT_DB_KEY",
+    lotus_enabled: bool = True,
 ) -> Path:
     db_path = tmp_path / "nested" / "data" / "audit.db"
     log_folder = tmp_path / "nested" / "logs"
@@ -60,7 +61,7 @@ sources:
     secret_ref: HRIS_DB
     enabled: true
   lotus_notes:
-    enabled: true
+    enabled: {str(lotus_enabled).lower()}
     mode: excel
     secret_ref: LOTUS_NOTES
     excel_input_folder: data/lotus_notes/incoming
@@ -139,6 +140,17 @@ def test_preflight_fails_if_lotus_file_mapping_is_missing_required_keys(tmp_path
     lotus_check = check_by_name(result, "lotus_excel_files")
     assert lotus_check["status"] == "failed"
     assert "missing keys" in lotus_check["message"]
+
+
+def test_preflight_reports_disabled_lotus_as_skipped(tmp_path: Path) -> None:
+    config_path = write_config(tmp_path, include_lotus_files=False, lotus_enabled=False)
+
+    result = run_preflight(str(config_path))
+
+    assert result["status"] == "passed"
+    lotus_check = check_by_name(result, "lotus_excel_files")
+    assert lotus_check["status"] == "skipped"
+    assert "SKIPPED (disabled)" in lotus_check["message"]
 
 
 def test_preflight_creates_db_and_log_folders_under_tmp_path_config(tmp_path: Path) -> None:

@@ -60,11 +60,22 @@ sources:
 
 Oracle endpoint details for ORION/Flexcube should live in KeePass entries, not in config. HRIS uses Dynamics 365 / Dataverse API endpoints in config and resolves only the client secret from KeePass. Lotus Excel file paths are configured under `sources.lotus_notes.files`.
 
+Source execution is config-driven. Set `enabled: false` for any source that is temporarily unavailable; the configured daily/backfill pipeline will skip that source's direct/staging jobs and continue with enabled sources. Disabled sources appear in preflight and run summaries as `SKIPPED (disabled)`.
+
+For the current deployment, Lotus Notes can remain disabled until BOV IT resolves CORBA connectivity:
+
+```yaml
+sources:
+  lotus_notes:
+    enabled: false
+```
+
 Lotus mode is selected with:
 
 ```yaml
 sources:
   lotus_notes:
+    enabled: true
     mode: excel # excel | corba
 ```
 
@@ -173,7 +184,7 @@ Check:
 
 For a failed daily run, fix the underlying cause and rerun `run-daily`. Use `run-backfill` when the historical window needs to be rebuilt or a schema/source issue affected multiple days.
 
-If a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password. If HRIS Dynamics fails, verify tenant ID, client ID, scope, token URL, endpoint URLs, API permissions/consent, network access to Dataverse, and the `HRIS_D365_PROD` client secret.
+If Lotus Notes is disabled, Lotus-derived final tables remain empty and the run can still complete. If Lotus is enabled and a Lotus Excel file is missing, place the expected file in the configured path and rerun. If Oracle connection fails, verify network access, KeePass entry fields, service name, host, port, username, and password. If HRIS Dynamics fails, verify tenant ID, client ID, scope, token URL, endpoint URLs, API permissions/consent, network access to Dataverse, and the `HRIS_D365_PROD` client secret.
 
 If Oracle source testing fails with `python-oracledb thin mode cannot be used
 because the cryptography package cannot be imported`, rebuild the executable
@@ -198,7 +209,16 @@ logged.
 
 ## H. Lotus Notes Mode
 
-Current mode is Excel ingestion. Required files:
+Lotus Notes can be disabled while BOV IT resolves CORBA access:
+
+```yaml
+lotus_notes:
+  enabled: false
+```
+
+When disabled, preflight reports `SKIPPED (disabled)` and daily/backfill runs do not execute Lotus staging jobs. Existing transforms refresh Lotus-derived final tables from empty staging data without failing.
+
+When enabled, current mode is Excel ingestion. Required files:
 
 - `lotus_bov_employees`
 - `lotus_legal_rulings`

@@ -34,7 +34,8 @@ def check_source_connections(
         try:
             source_config = getattr(settings.sources, current_source)
             if not source_config.enabled:
-                raise ValueError(f"Source '{current_source}' is disabled.")
+                logger.info("Source connectivity skipped: %s - SKIPPED (disabled)", current_source)
+                continue
             if current_source == "hris" and (source_config.type or "oracle").lower() == "dynamics365":
                 dynamics_client = HrisDynamicsClient(
                     config=source_config.dynamics365,

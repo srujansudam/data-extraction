@@ -78,7 +78,7 @@ class FakeHrisDynamicsClient:
         pass
 
 
-def write_config(tmp_path: Path) -> Path:
+def write_config(tmp_path: Path, *, hris_enabled: bool = True) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -93,6 +93,7 @@ sources:
     secret_ref: FLEXCUBE_DB
   hris:
     secret_ref: HRIS_DB
+    enabled: {str(hris_enabled).lower()}
   lotus_notes:
     enabled: false
 extraction:
@@ -198,6 +199,21 @@ def test_source_all_tests_all_sources(
     assert FakeOracleConnector.created_refs == ["ORION_DB", "FLEXCUBE_DB", "HRIS_DB"]
     assert FakeOracleConnector.queried_sql == [HEALTH_CHECK_SQL] * 3
     assert FakeOracleConnector.closed_refs == ["ORION_DB", "FLEXCUBE_DB", "HRIS_DB"]
+
+
+def test_source_all_skips_disabled_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    prepare_fakes(monkeypatch)
+
+    successful = run_source_test(str(write_config(tmp_path, hris_enabled=False)), "all")
+
+    assert successful == ["orion", "flexcube"]
+    assert FakeOracleConnector.created_refs == ["ORION_DB", "FLEXCUBE_DB"]
+    assert FakeOracleConnector.queried_sql == [HEALTH_CHECK_SQL] * 2
+    assert "Source connectivity skipped: hris - SKIPPED (disabled)" in capsys.readouterr().err
 
 
 def test_source_hris_dynamics_uses_api_not_oracle(
